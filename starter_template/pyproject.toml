@@ -1,0 +1,27 @@
+[project]
+name = "starter-template"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "VA1357",email = "vibhuagarwal0@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.10,<3.12"
+dependencies = [
+    "crewai @ git+https://github.com/joaomdmoura/crewai.git",
+    "openai (>=1.68.2,<2.0.0)",
+    "python-dotenv (>=1.0.1,<2.0.0)",
+    "python-decouple (>=3.8,<4.0)",
+    "langchain (>=0.1.16,<0.2.0)",
+    "langchain-openai (>=0.0.6,<0.0.7)",
+    "duckduckgo-search (>=7.5.3,<8.0.0)",
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+package-mode = false
+

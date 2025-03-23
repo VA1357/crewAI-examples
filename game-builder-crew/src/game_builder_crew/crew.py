@@ -1,6 +1,9 @@
 from typing import List
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
+from game_builder_crew.gemini_wrapper import GeminiLLM
+from google.generativeai import GenerativeModel
+from crewai import Agent
 
 @CrewBase
 class GameBuilderCrew:
@@ -12,6 +15,7 @@ class GameBuilderCrew:
     def senior_engineer_agent(self) -> Agent:
         return Agent(
             config=self.agents_config['senior_engineer_agent'],
+            llm=GeminiLLM(),
             allow_delegation=False,
             verbose=True
         )
@@ -20,6 +24,7 @@ class GameBuilderCrew:
     def qa_engineer_agent(self) -> Agent:
         return Agent(
             config=self.agents_config['qa_engineer_agent'],
+            llm=GeminiLLM(),
             allow_delegation=False,
             verbose=True
         )
@@ -28,6 +33,7 @@ class GameBuilderCrew:
     def chief_qa_engineer_agent(self) -> Agent:
         return Agent(
             config=self.agents_config['chief_qa_engineer_agent'],
+            llm=GeminiLLM(),
             allow_delegation=True,
             verbose=True
         )

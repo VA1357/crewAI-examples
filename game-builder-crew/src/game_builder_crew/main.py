@@ -8,7 +8,7 @@ def run():
     print("## Welcome to the Game Crew")
     print('-------------------------------')
 
-    with open('src/game_builder_crew/config/gamedesign.yaml', 'r', encoding='utf-8') as file:
+    with open('game_builder_crew/config/gamedesign.yaml', 'r', encoding='utf-8') as file:
         examples = yaml.safe_load(file)
 
     inputs = {
@@ -28,7 +28,7 @@ def train():
     Train the crew for a given number of iterations.
     """
 
-    with open('src/game_builder_crew/config/gamedesign.yaml', 'r', encoding='utf-8') as file:
+    with open('game_builder_crew/config/gamedesign.yaml', 'r', encoding='utf-8') as file:
         examples = yaml.safe_load(file)
 
     inputs = {
@@ -39,3 +39,7 @@ def train():
 
     except Exception as e:
         raise Exception(f"An error occurred while training the crew: {e}")
+
+if __name__ == "__main__":
+    run()
+
