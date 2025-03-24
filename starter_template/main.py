@@ -1,83 +1,72 @@
 import os
 from decouple import config
 from dotenv import load_dotenv
-from crewai import Agent, Task, Crew, LLM
-
-load_dotenv()
-
-#set env variables
-os.environ["OPENAI_API_KEY"] = config("OPENAI_API_KEY")
-os.environ["OPENAI_ORGANIZATION"] = config("OPENAI_ORGANIZATION_ID")
-llm = LLM(model=os.getenv("MODEL"))
-
-from crewai import Agent, Task, Crew, Process
-from langchain_openai.chat_models import ChatOpenAI
-
-from textwrap import dedent
+from crewai import Crew, LLM
 from agents import CustomAgents
 from tasks import CustomTasks
+from textwrap import dedent
 
+# Load environment variables
+load_dotenv()
 
-# Install duckduckgo-search for this example:
-# !pip install -U duckduckgo-search
+# LLM setup (Gemini via LiteLLM)
+llm = LLM(model=os.getenv("MODEL"))
 
-from langchain.tools import DuckDuckGoSearchRun
+# Load template files
+def read_template_file(path):
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read()
 
-search_tool = DuckDuckGoSearchRun()
+template_html = read_template_file("templates/index.html")
+template_js = read_template_file("templates/game.js")
+template_config = read_template_file("templates/config.js")
 
-
-
-# This is the main class that you will use to define your custom crew.
-# You can define as many agents and tasks as you want in agents.py and tasks.py
-
-
-class CustomCrew:
-    def __init__(self, var1, var2):
-        self.var1 = var1
-        self.var2 = var2
-
-    def run(self):
-        # Define your custom agents and tasks in agents.py and tasks.py
-        agents = CustomAgents()
-        tasks = CustomTasks()
-
-        # Define your custom agents and tasks here
-        custom_agent_1 = agents.agent_1_name()
-        custom_agent_2 = agents.agent_2_name()
-
-        # Custom tasks include agent name and variables as input
-        custom_task_1 = tasks.task_1_name(
-            custom_agent_1,
-            self.var1,
-            self.var2,
-        )
-
-        custom_task_2 = tasks.task_2_name(
-            custom_agent_2,
-        )
-
-        # Define your custom crew here
-        crew = Crew(
-            agents=[custom_agent_1, custom_agent_2],
-            tasks=[custom_task_1, custom_task_2],
-            verbose=True,
-            llm=llm
-        )
-
-        result = crew.kickoff()
-        return result
-
-
-# This is the main function that you will use to run your custom crew.
+# Main execution
 if __name__ == "__main__":
-    print("## Welcome to Crew AI Template")
-    print("-------------------------------")
-    var1 = input(dedent("""Enter variable 1: """))
-    var2 = input(dedent("""Enter variable 2: """))
+    print("## Space Shooter AI Game Builder 🚀")
+    print("-----------------------------------")
 
-    custom_crew = CustomCrew(var1, var2)
-    result = custom_crew.run()
-    print("\n\n########################")
-    print("## Here is you custom crew run result:")
-    print("########################\n")
-    print(result)
+    # User customizations
+    user_prompt = input(dedent("""Describe your custom space shooter features: """))
+
+    # Initialize
+    agents = CustomAgents()
+    tasks = CustomTasks()
+
+    # Create agents
+    designer = agents.game_designer_agent()
+    developer = agents.frontend_dev_agent()
+    reviewer = agents.qa_agent()
+
+    # Assign tasks
+    task1 = tasks.task_generate_game_design(designer, user_prompt)
+    task2 = tasks.task_modify_template_code(developer, "{task1.output}", template_html, template_js, template_config)
+    task3 = tasks.task_review_code(reviewer, "{task2.output[html]}", "{task2.output[js]}", "{task2.output[config]}")
+
+    # Build crew
+    crew = Crew(
+        agents=[designer, developer, reviewer],
+        tasks=[task1, task2, task3],
+        llm=llm,
+        verbose=True
+    )
+
+    # Run crew
+    result = crew.kickoff()
+
+    # Save results
+    output_dir = "output_game"
+    os.makedirs(output_dir, exist_ok=True)
+
+    if isinstance(result, dict):
+        with open(f"{output_dir}/output_game.html", "w", encoding="utf-8") as f:
+            f.write(result.get("html", ""))
+        with open(f"{output_dir}/output_game.js", "w", encoding="utf-8") as f:
+            f.write(result.get("js", ""))
+        with open(f"{output_dir}/output_config.js", "w", encoding="utf-8") as f:
+            f.write(result.get("config", ""))
+    else:
+        print("\n⚠️ Unexpected output format. Raw result:\n")
+        print(result)
+
+    print("\n✅ Game build complete! Check the 'output_game' folder.")

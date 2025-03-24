@@ -1,36 +1,46 @@
 from crewai import Agent
 from textwrap import dedent
-#from langchain.llms import Ollama
-#from langchain_openai import ChatOpenAI
 from gemini_wrapper import GeminiLLM
 
-
-# This is an example of how to define custom agents.
-# You can define as many agents as you want.
-# You can also define custom tasks in tasks.py
 class CustomAgents:
     def __init__(self):
-        #self.OpenAIGPT35 = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.7)
-        #self.OpenAIGPT4 = ChatOpenAI(model_name="gpt-4", temperature=0.7)
-        #self.Ollama = Ollama(model="openhermes")
         self.gemini = GeminiLLM()
-        print(self.gemini)
-    def agent_1_name(self):
+
+    def game_designer_agent(self):
         return Agent(
-            role="Python Game Developer",
-            backstory=dedent("""You are a skilled game developer using Python."""),
-            goal=dedent("""Create high-quality games based on user input."""),
+            role="Game Designer",
+            goal="Plan improvements and new features for a space shooter game based on user input. Focus on adding new enemies to make the game more interesting if no extra additions are specified.",
+            backstory=dedent("""
+                You are a creative game designer with a deep understanding of game mechanics, pacing, and user engagement.
+                You work specifically on HTML5-based arcade games and have experience balancing fun with technical constraints.
+            """),
             allow_delegation=False,
             verbose=True,
-            #llm=self.gemini,  # use Gemini here
+            #llm=self.gemini,
         )
 
-    def agent_2_name(self):
+    def frontend_dev_agent(self):
         return Agent(
-            role="Game Code Reviewer",
-            backstory=dedent("""You specialize in reviewing game code for bugs and improvements."""),
-            goal=dedent("""Ensure that the final code is error-free and optimized."""),
+            role="Frontend Game Developer",
+            goal="Implement new game features and improvements in the HTML/CSS/JS template based on design instructions. Specifically add front end components for new features like new enemies (including images) if no specifications specified.",
+            backstory=dedent("""
+                You are a skilled frontend developer who specializes in building and modifying HTML5 browser games.
+                Your task is to inject the designed features cleanly into the existing space shooter game code.
+            """),
             allow_delegation=False,
             verbose=True,
-            #llm=self.gemini,  # and here
+            #llm=self.gemini,
+        )
+
+    def qa_agent(self):
+        return Agent(
+            role="Game Quality Analyst",
+            goal="Review the generated game code for bugs, inconsistencies, and integration issues.",
+            backstory=dedent("""
+                You are an expert in spotting issues in JavaScript and HTML game code.
+                You run quality control by analyzing logic flaws, rendering bugs, and gameplay inconsistencies.
+            """),
+            allow_delegation=False,
+            verbose=True,
+            #llm=self.gemini,
         )
