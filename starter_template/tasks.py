@@ -2,71 +2,135 @@ from crewai import Task
 from textwrap import dedent
 
 class CustomTasks:
+
     def task_generate_game_design(self, agent, user_prompt):
         return Task(
-            description=dedent(f"""
-                Based on the following user input, describe how to modify the space shooter game template:
-                
+            description=dedent("""
+                Based on the following user input:
                 ---
                 {user_prompt}
-                ---
+                ---           
+                Always create a comprehensive design document for a space shooter game.
 
-                Specify clear gameplay features such as:
-                - Player ship behavior
-                - Enemy types (focus on adding new enemies)
-                - Power-ups
-                - Scoring mechanics
-                - UI changes (if any)
-                - Any new levels or difficulty adjustments
+                The design must describe, regardless of user input specifications:
+                - Core gameplay loop (movement, shooting, enemies)
+                - Player controls (keyboard/mouse)
+                - Enemy types and behaviors
+                - Bullet collision logic
+                - UI components (Play button, HUD, Game Over)
+                - Victory/Restart mechanics
 
-                Output as a structured game design plan.
+                Do not include power-ups or advanced features unless requested.
+
+                Be concise but complete. Focus on what is required for a **fully playable game**.
             """),
-            expected_output="A structured list of game design features and changes.",
+            expected_output=dedent("""
+                A clear bullet-point list of features, mechanics, and gameplay elements.
+                This will be used by developers to implement the actual game files.
+            """),
             agent=agent,
         )
 
-    def task_modify_template_code(self, agent, game_design_plan, template_html, template_js, template_config):
+    def task_generate_game_js(self, agent, game_design, template_js):
         return Task(
             description=dedent(f"""
-                Use the following base files of a space shooter game:
+                Implement a complete `game.js` file using the following design plan:
 
+                ---
+                {game_design}
+                ---
+
+                Implement the core game functionality in `game.js` using the base template provided:
+                {template_js}
+
+                Implement:
+                - Ship movement (WASD)
+                - Mouse-based aiming and shooting
+                - Enemy spawning and behavior
+                - Bullet-enemy collisions
+                - Score, health, and game-over logic
+                - Game loop via requestAnimationFrame
+
+                ✅ You must generate a **complete and runnable** game.js file.
+
+                ⚠️ Do NOT include placeholders like "rest of logic here".
+                ⚠️ Avoid powerups, towers, shields, or other optional features.
+
+                Assume missing images or sounds will be patched later.
+            """),
+            expected_output=dedent("""
+                A full game.js file that implements core functionality and does not crash.
+            """),
+            agent=agent,
+        )
+
+    def task_generate_ui(self, agent, game_design, template_html, template_css):
+        return Task(
+            description=dedent(f"""
+                Generate `index.html` and `style.css` files for a sci-fi themed space shooter game.
+
+                Use these base templates:
                 HTML:
                 {template_html}
 
-                JavaScript:
-                {template_js}
+                CSS:
+                {template_css}
 
-                Config:
-                {template_config}
+                Refer to this design plan:
+                {game_design}
 
-                Modify the game by applying the design plan below:
-                {game_design_plan}
+                HTML should include:
+                - Play button to start the game
+                - Canvas element for rendering
+                - HUD for health, score, and timer
+                - Optional Game Over and Instructions screens
 
-                You must:
-                - Only output modified versions of the 3 files (if no clear additions, add a new enemy)
-                - Ensure the modified files work together seamlessly
-                - Inject new logic cleanly and keep existing structure where possible
+                CSS must:
+                - Style the layout, buttons, and screens for both desktop and mobile
+                - Include canvas styling and hide/show screens appropriately
+
+                Output format:
+                {{
+                  "html": "...complete index.html...",
+                  "css": "...complete style.css..."
+                }}
             """),
-            expected_output="The fully updated HTML, JS, and config files.",
+            expected_output="A JSON object with full HTML and CSS contents.",
             agent=agent,
         )
 
-    def task_review_code(self, agent, html_code, js_code, config_code):
+    def task_quality_review(self, agent, html_code, css_code, js_code):
         return Task(
             description=dedent(f"""
-                Review the following modified code for bugs, syntax issues, or logic flaws.
+                Review the following files for functionality and completeness:
 
                 HTML:
                 {html_code}
 
-                JavaScript:
+                CSS:
+                {css_code}
+
+                JS:
                 {js_code}
 
-                Config:
-                {config_code}
+                ✅ Check that:
+                - Play button starts the game
+                - Canvas appears and game loop runs
+                - Ship can move and shoot
+                - Enemies spawn and can be destroyed
+                - No TODOs, stubs, or missing logic exist
 
-                If any issues are found, correct them in your output. Otherwise, approve the files.
+                ❌ Do not add new features. Just fix bugs or missing logic if found.
+
+                Return the final version of all three files, ready to run.
+                
+                Output format:
+                {{
+                "html": "...",
+                "js": "...",
+                "css": "..."
+                }}
             """),
-            expected_output="Reviewed and corrected versions of HTML, JS, and config files.",
+            expected_output="Fully corrected HTML, JS, and CSS code as a JSON object.",
             agent=agent,
         )

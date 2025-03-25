@@ -1,46 +1,42 @@
 from crewai import Agent
-from textwrap import dedent
-from gemini_wrapper import GeminiLLM
+#from gemini_wrapper import GeminiLLM
+
+#llm = GeminiLLM()
 
 class CustomAgents:
     def __init__(self):
-        self.gemini = GeminiLLM()
-
-    def game_designer_agent(self):
-        return Agent(
+        self.GameDesigner = Agent(
             role="Game Designer",
-            goal="Plan improvements and new features for a space shooter game based on user input. Focus on adding new enemies to make the game more interesting if no extra additions are specified.",
-            backstory=dedent("""
-                You are a creative game designer with a deep understanding of game mechanics, pacing, and user engagement.
-                You work specifically on HTML5-based arcade games and have experience balancing fun with technical constraints.
-            """),
-            allow_delegation=False,
+            goal="Design a complete game plan for a simple HTML/JS-based space shooter",
+            backstory="You are a game designer focused on crafting fun and balanced mechanics for casual games.",
             verbose=True,
-            #llm=self.gemini,
+            allow_delegation=True,
+            #llm=self.llm,
         )
 
-    def frontend_dev_agent(self):
-        return Agent(
-            role="Frontend Game Developer",
-            goal="Implement new game features and improvements in the HTML/CSS/JS template based on design instructions. Specifically add front end components for new features like new enemies (including images) if no specifications specified.",
-            backstory=dedent("""
-                You are a skilled frontend developer who specializes in building and modifying HTML5 browser games.
-                Your task is to inject the designed features cleanly into the existing space shooter game code.
-            """),
-            allow_delegation=False,
+        self.GameplayEngineer = Agent(
+            role="Gameplay Engineer",
+            goal="Implement functional game.js code including player movement, shooting, enemies, and collisions",
+            backstory="You are a JavaScript game developer focused on gameplay loops and real-time mechanics using HTML canvas.",
             verbose=True,
-            #llm=self.gemini,
+            allow_delegation=True,
+            #llm=self.llm,
         )
 
-    def qa_agent(self):
-        return Agent(
-            role="Game Quality Analyst",
-            goal="Review the generated game code for bugs, inconsistencies, and integration issues.",
-            backstory=dedent("""
-                You are an expert in spotting issues in JavaScript and HTML game code.
-                You run quality control by analyzing logic flaws, rendering bugs, and gameplay inconsistencies.
-            """),
-            allow_delegation=False,
+        self.UIUXIntegrator = Agent(
+            role="UI/UX Integrator",
+            goal="Create a complete HTML structure and CSS for game screens, play button, and HUD",
+            backstory="You are a front-end developer who ensures the game UI is functional, clean, and responsive.",
             verbose=True,
-            #llm=self.gemini,
+            allow_delegation=True,
+            #llm=self.llm,
+        )
+
+        self.QATester = Agent(
+            role="Game QA Tester",
+            goal="Review all generated code to ensure a fully runnable game with no placeholders or missing code",
+            backstory="You specialize in playtesting and code auditing to confirm that the output HTML/JS/CSS forms a playable game.",
+            verbose=True,
+            allow_delegation=True,
+            #llm=self.llm,
         )

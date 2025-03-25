@@ -1,0 +1,25 @@
+Build a complete and playable HTML5 space shooter game using the provided template.
+
+The gameplay should include:
+
+- A player ship that moves using the WASD keys
+- Mouse-based directional shooting
+- Enemies that spawn from the top of the screen and move downward
+- Bullet-enemy collision detection and removal
+- A working HUD that shows:
+  - Timer (survival time)
+  - Coin counter or score
+  - Fire rate display
+  - Health bar or value
+- A functioning "Play" button that transitions from the start menu to the game screen
+- A Game Over screen that appears when the player's health reaches zero
+- A game loop that starts and runs using requestAnimationFrame
+
+Constraints:
+
+- Do NOT include powerups, turrets, boost mechanics, shields, ammo systems, or any non-essential features
+- Avoid all placeholder comments like “rest of code goes here” or “implement logic here”
+- Ensure all three output files (index.html, game.js, style.css) are fully populated and runnable as-is in the browser
+- Assume that assets like images or audio might be missing, and the game should still run without them
+
+This is a browser-based game. Design for both desktop and mobile compatibility where possible. Focus on the minimum viable game experience that is fun, complete, and responsive.
