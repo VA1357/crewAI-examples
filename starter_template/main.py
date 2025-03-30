@@ -9,21 +9,6 @@ from textwrap import dedent
 import json
 import re
 
-# Load environment variables
-load_dotenv()
-
-# LLM setup (Gemini via LiteLLM)
-llm = LLM(model=os.getenv("MODEL"))
-
-# Load template files
-def read_template_file(path):
-    with open(path, "r", encoding="utf-8") as f:
-        return f.read()
-
-template_html = read_template_file("templates/index.html")
-template_js = read_template_file("templates/game.js")
-template_css = read_template_file("templates/style.css")
-
 # Main execution
 if __name__ == "__main__":
     print("## Space Shooter AI Game Builder 🚀")
