@@ -25,19 +25,19 @@ def run():
             f.write(str(game))
     
 
-def train():
-    """
-    Train the crew for a given number of iterations.
-    """
+# def train():
+#     """
+#     Train the crew for a given number of iterations.
+#     """
 
-    with open('src/game_builder_crew/config/gamedesign.yaml', 'r', encoding='utf-8') as file:
-        examples = yaml.safe_load(file)
+#     with open('src/game_builder_crew/config/gamedesign.yaml', 'r', encoding='utf-8') as file:
+#         examples = yaml.safe_load(file)
 
-    inputs = {
-        'game' : examples['spacegame']
-    }
-    try:
-        GameBuilderCrew().crew().train(n_iterations=int(sys.argv[1]), filename=sys.argv[2], inputs=inputs)
+#     inputs = {
+#         'game' : examples['spacegame']
+#     }
+#     try:
+#         GameBuilderCrew().crew().train(n_iterations=int(sys.argv[1]), filename=sys.argv[2], inputs=inputs)
 
-    except Exception as e:
-        raise Exception(f"An error occurred while training the crew: {e}")
+#     except Exception as e:
+#         raise Exception(f"An error occurred while training the crew: {e}")

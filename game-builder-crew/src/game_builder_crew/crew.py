@@ -12,50 +12,78 @@ class GameBuilderCrew:
     tasks_config = 'config/tasks.yaml'
 
     @agent
-    def senior_engineer_agent(self) -> Agent:
+    def game_logic_agent(self) -> Agent:
         return Agent(
-            config=self.agents_config['senior_engineer_agent'],
+            config=self.agents_config['game_logic_agent'],
             allow_delegation=False,
             verbose=True
         )
-    
+
     @agent
-    def qa_engineer_agent(self) -> Agent:
+    def ui_ux_agent(self) -> Agent:
         return Agent(
-            config=self.agents_config['qa_engineer_agent'],
+            config=self.agents_config['ui_ux_agent'],
             allow_delegation=False,
             verbose=True
         )
-    
+
     @agent
-    def chief_qa_engineer_agent(self) -> Agent:
+    def user_input_agent(self) -> Agent:
         return Agent(
-            config=self.agents_config['chief_qa_engineer_agent'],
+            config=self.agents_config['user_input_agent'],
+            allow_delegation=False,
+            verbose=True
+        )
+
+    @agent
+    def code_integration_agent(self) -> Agent:
+        return Agent(
+            config=self.agents_config['code_integration_agent'],
             allow_delegation=True,
             verbose=True
         )
-    
 
-    @task
-    def code_task(self) -> Task:
-        return Task(
-            config=self.tasks_config['code_task'],
-            agent=self.senior_engineer_agent()
+    @agent
+    def testing_debugging_agent(self) -> Agent:
+        return Agent(
+            config=self.agents_config['testing_debugging_agent'],
+            allow_delegation=False,
+            verbose=True
         )
 
     @task
-    def review_task(self) -> Task:
+    def generate_game_logic_task(self) -> Task:
         return Task(
-            config=self.tasks_config['review_task'],
-            agent=self.qa_engineer_agent(),
-            #### output_json=ResearchRoleRequirements
+            config=self.tasks_config['generate_game_logic_task'],
+            agent=self.game_logic_agent()
         )
 
     @task
-    def evaluate_task(self) -> Task:
+    def design_ui_task(self) -> Task:
         return Task(
-            config=self.tasks_config['evaluate_task'],
-            agent=self.chief_qa_engineer_agent()
+            config=self.tasks_config['design_ui_task'],
+            agent=self.ui_ux_agent()
+        )
+
+    @task
+    def handle_user_input_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['handle_user_input_task'],
+            agent=self.user_input_agent()
+        )
+
+    @task
+    def integrate_code_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['integrate_code_task'],
+            agent=self.code_integration_agent()
+        )
+
+    @task
+    def test_and_debug_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['test_and_debug_task'],
+            agent=self.testing_debugging_agent()
         )
 
     @crew
