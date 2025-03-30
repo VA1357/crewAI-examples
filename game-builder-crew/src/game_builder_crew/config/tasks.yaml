@@ -1,0 +1,37 @@
+code_task:
+  description: >
+    You will create a game using html css and javascript, these are the instructions:
+    You are provided with a working html game, your job is to completely revamp the css.
+
+    Instructions
+    ------------
+    {game}
+    
+  expected_output: >
+    Your Final answer must be the full html code containing css and javascript as close to the original as possible, only the html nothing else.
+
+review_task:
+  description: >
+    You will create a game using html css and javascript, these are the instructions:
+
+    Instructions
+    ------------
+    {game}
+
+    Using the code you got, check for errors. Check for logic errors,
+    syntax errors, missing imports, variable declarations, mismatched brackets.
+  expected_output: >
+    Your Final answer must be the full html code containing css and javascript as close to the original as possible, only the html nothing else.
+
+evaluate_task:
+  description: >
+    You are helping create a game using html css and javascript, these are the instructions:
+
+    Instructions
+    ------------
+    {game}
+
+    You will look over the code to ensure that it is complete and
+    does the job that it is supposed to do.
+  expected_output: >
+    Your Final answer must be the full html code containing css and javascript as close to the original as possible, only the html nothing else.
