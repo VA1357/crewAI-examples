@@ -15,11 +15,14 @@ def run():
 
     # Assuming gamedesign.yaml just contains the game name or theme for context
     # If it contains detailed descriptions, load them here instead of hardcoding below
-    game_name = "Space Explorer Deluxe" # Example game name
+    game_name = "SpaceScape" # Example game name
 
-    # --- Define Inputs including Descriptions AND Filenames ---
+    with open('src/game_builder_crew/config/gamedesign.yaml', 'r', encoding='utf-8') as file:
+        examples = yaml.safe_load(file)
+
     inputs = {
-        'game': game_name,
+        'game' :  examples['spacegame'],
+        'gameDesc': game_name,
 
         # Background
         'background_description': "A stunning panoramic view of deep outer space, featuring distant swirling galaxies, nebulae in vibrant blues and purples, and scattered bright stars. Dark, atmospheric.",
@@ -49,10 +52,7 @@ def run():
         'tower_description': "A stationary enemy defensive structure resembling a large, metallic ring floating in space. Sections of the ring might have turrets or energy emitters. Central opening is clear. Industrial, slightly menacing space-station aesthetic.",
         'tower_filename': "tower",
 
-        # --- Add inputs for your original tasks (code_task etc.) if they are still active ---
-        # 'code_task_input': "...",
     }
-    # --------------------------------------------------------
 
     print("Starting Crew kickoff with inputs:")
     # Optionally print inputs for verification, excluding sensitive ones if any

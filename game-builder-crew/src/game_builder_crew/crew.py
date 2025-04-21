@@ -81,6 +81,16 @@ class GameBuilderCrew:
             verbose=True,
             llm=llm # Agent still needs an LLM for reasoning and tool usage planning
         )
+    
+    @agent
+    def audio_artist_agent(self) -> Agent:
+        """Agent responsible for generating game assets using audio tools."""
+        return Agent(
+            config=self.agents_config['concept_artist'],
+            allow_delegation=False,
+            verbose=True,
+            llm=llm # Agent still needs an LLM for reasoning and tool usage planning
+        )
     # --- End Agent Definitions ---
 
     # --- Task Definitions ---
@@ -168,6 +178,14 @@ class GameBuilderCrew:
         return Task(
             config=self.tasks_config['generate_tower_task'],
             agent=self.concept_artist_agent()
+        )
+    
+    @task
+    def generate_audio_task(self) -> Task:
+        """Generate audio for game sounds"""
+        return Task(
+            config=self.tasks_config['generate_audio_task'],
+            agent=self.audio_artist_agent()
         )
     # --- End Task Definitions ---
 

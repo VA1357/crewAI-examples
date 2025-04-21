@@ -98,5 +98,11 @@ generate_tower_task:
     Utilize the assigned image generation tool.
   expected_output: |
     Confirmation message stating the tower image asset was generated and saved, including the full local file path ending with '{tower_filename}.[ext]'.
+  
+generate_audio_task:
+  description: |
+    Generate the audio assets for the game '{game}' using '{gameDesc}'.
+  expected_output: |
+    Detailed audio descriptions for each of the instances of audio files in the game code.
 
 # --- End Updated Game Asset Tasks ---
