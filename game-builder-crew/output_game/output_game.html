@@ -510,6 +510,7 @@
                 <li>Shoot automatically when mouse button down or screen held</li>
                 <li>Press 1 or Tap 'Upgrade' Button to upgrade fire rate (costs 5 coins)</li>
                 <li>Press 2 or Tap 'Place Turret' Button to place tower (costs 10 coins)</li>
+                <li>Press Q or Tap 'Switch Dim' Button to switch dimensions</li>
                 <li>Collect coins from defeated enemies</li>
                 <li>Avoid hazards: asteroids (shootable, +1 HP), solar flares (speed up enemies), debris (damages all)</li>
                 <li>Enemies: Zephyr (Zigzag), Nebula (Spiral/Shoot), Void Mine Layer (Drops mines)</li>
@@ -533,6 +534,7 @@
             <div id="action-buttons">
                 <button id="turret-button" class="action-btn">Place Turret (10)</button>
                 <button id="upgrade-button" class="action-btn">Upgrade Fire Rate (5)</button>
+                <button id="dimension-switch-button" class="action-btn">Switch Dim (Q)</button>
             </div>
         </div>
     </div>
@@ -548,9 +550,9 @@
     </div>
 
     <!-- ALL AUDIO HTML -->
-    <audio id="lobby-music" loop><source src="Cosmic Shadows.mp3" type="audio/mpeg" /></audio>
+    <audio id="lobby-music" loop><source src="GameIntro.wav" type="audio/mpeg" /></audio>
     <audio id="background-music" loop><source src="background-music.mp3" type="audio/mpeg" /></audio>
-    <audio id="gameover-music"><source src="GameOverSound2.wav" type="audio/wav"></audio>
+    <audio id="gameover-music"><source src="GameOverSound.wav" type="audio/wav"></audio>
     <audio id="turret-place-sound" src="turret_place.wav"></audio>
     <audio id="turret-death-sound" src="turret_death.mp3"></audio>
     <audio id="turret-shoot-sound" src="ship_shoot.wav"></audio>
@@ -566,6 +568,7 @@
     <!-- Void Mine Audio (Optional) -->
     <audio id="mine-place-sound" src="mine_place.wav"></audio> <!-- Add sound effect element -->
     <audio id="mine-explode-sound" src="mine_explode.wav"></audio> <!-- Add sound effect element -->
+    <audio id="dimension-switch-sound" src="dimension_switches.mp3"></audio>
 
 
     <script>
@@ -612,6 +615,7 @@
                     debris: document.getElementById("debris-sound"),
                     minePlace: document.getElementById("mine-place-sound"), // Added
                     mineExplode: document.getElementById("mine-explode-sound"), // Added
+                    dimensionSwitch: document.getElementById("dimension-switch-sound"), // Added
                 };
             }
 
@@ -752,6 +756,8 @@
                 this.ui = ui;
                 this.ctx = null; // Initialize context as null, get it later
 
+                this.currentDimension = 0; // 0 for Dimension A, 1 for Dimension B
+
                 this.gameOver = false;
                 this.startTime = null;
                 this.elapsedTime = 0;
@@ -762,14 +768,17 @@
                 this.maxPlayerHealth = 5; // Max health
 
                 this.player = { x: 0, y: 0, size: 40, speed: 200 }; // Player size, Speed in pixels/second
-                this.projectiles = [];
-                this.enemies = [];
-                this.coins = [];
-                this.towers = [];
-                this.asteroids = [];
-                this.debris = [];
-                this.mines = []; // Add mines array
-                this.solarFlare = { active: false, warningTime: 0, duration: 0 };
+                
+                // Dimension-specific entity arrays
+                this.projectiles = [[], []]; // [dimA_projectiles, dimB_projectiles]
+                this.enemies = [[], []];
+                this.coins = [[], []];
+                this.towers = [[], []];
+                this.asteroids = [[], []];
+                this.debris = [[], []];
+                this.mines = [[], []];
+
+                this.solarFlare = { active: false, warningTime: 0, duration: 0 }; // Solar flare might be global or dimension-specific; let's assume global for now for simplicity unless specified otherwise. If dimension-specific, it would become an array too.
 
 
                 this.projectileSpeed = 400; // pixels/second
@@ -789,7 +798,7 @@
                 this.debrisBaseSpeed = 150; // pixels/second
 
                 this.isShooting = false;
-                this.keys = { w: false, a: false, s: false, d: false };
+                this.keys = { w: false, a: false, s: false, d: false, q: false }; // Added 'q'
                 this.mouseX = 0;
                 this.mouseY = 0;
                 this.touchX = 0;
@@ -799,12 +808,15 @@
                 this.moveSoundPlaying = false;
 
                 // Timers (in seconds)
-                this.timeSinceLastSpawn = 0; // General timer, maybe remove if using specific ones
+                this.timeSinceLastSpawn = 0; 
                 this.timeSinceLastShot = 0;
                 this.timeSinceLastHazard = 0;
-                this.timeSinceLastZephyrScout = 5;   // Start spawning earlier
-                this.timeSinceLastNebulaStalker = 10; // Start spawning earlier
-                this.timeSinceLastVoidMineLayer = 15; // *** FIX: Add timer for Void Mine Layer ***
+                // These timers are for spawning within the current dimension.
+                // If they need to be independent per dimension, they'd also become arrays.
+                // For now, assume they reset or are relevant to the active dimension's spawning logic.
+                this.timeSinceLastZephyrScout = 5;
+                this.timeSinceLastNebulaStalker = 10;
+                this.timeSinceLastVoidMineLayer = 15;
 
                 this.joystickActive = false;
                 this.joystickX = 0;
@@ -816,15 +828,17 @@
                     player: "player.png",
                     zephyrScout: "enemy.png",
                     nebulaStalker: "nebula_stalker.png",
-                    solarCharger: "solarCharger.png", // Placeholder image
-                    fractalShard: "fractalShard.png", // Placeholder image
-                    voidMineLayer: "voidMineLayer.png", // Placeholder image
+                    solarCharger: "solarCharger.png", 
+                    fractalShard: "fractalShard.png", 
+                    voidMineLayer: "voidMineLayer.png", 
                     coin: "coin.png",
-                    background: "background.png",
+                    backgroundDimA: "background.png", // Renamed for clarity
+                    backgroundDimB: "background_swapped.png", // For dimension B
                     tower: "tower.png",
                     asteroid: "asteroid.png",
-                    mine: "mine.png" // Add mine image source if you have one
+                    mine: "mine.png"
                 };
+                this.activeBackgroundImage = null; // Will be set after images load
                 this.imagesLoaded = 0;
                 this.totalImages = Object.keys(this.imageSources).length;
                 this.allImagesLoaded = false;
@@ -832,20 +846,18 @@
 
                 // Enemy type definitions (speed in pixels/sec)
                  this.enemyTypes = {
-                    // Health, BaseSpeed, Damage Player, Damage Tower, specific properties...
                     zephyrScout: { health: 1, speed: 100, damageToPlayer: 1, damageToTower: 1, zigzagTimer: 0, zigzagDirection: 1, zigzagAmplitude: 80 },
                     nebulaStalker: { health: 3, speed: 90, damageToPlayer: 1, damageToTower: 1, circleRadius: 300, circleAngle: 0, shotTimer: 0, projectileSpeed: 200, shootInterval: 4.0 },
                     solarCharger: { health: 2, speed: 120, damageToPlayer: 2, damageToTower: 2, chargeTarget: null, explosionRadius: 50, slowSpeed: 75 },
                     fractalShard: { health: 4, speed: 70, damageToPlayer: 0.5, damageToTower: 0.5, spiralAngle: 0, shardHealth: 1, shardSpeed: 50 },
-                    voidMineLayer: { health: 5, speed: 60, damageToPlayer: 1.5, damageToTower: 1.5, damageToEnemies: 1.0, mineTimer: 0, mineInterval: 6.0, maxMines: 3, mineLifespan: 10, mineRadius: 10, mineExplosionRadius: 60 } // Added enemy damage
+                    voidMineLayer: { health: 5, speed: 60, damageToPlayer: 1.5, damageToTower: 1.5, damageToEnemies: 1.0, mineTimer: 0, mineInterval: 6.0, maxMines: 3, mineLifespan: 10, mineRadius: 10, mineExplosionRadius: 60 } 
                 };
 
-                this.currentHazardWarning = ""; // Store hazard warning for HUD
+                this.currentHazardWarning = ""; 
 
                 this.setupEventListeners();
             }
 
-             // Method to load all images
             loadImages() {
                  this.allImagesLoaded = false;
                  this.imagesLoaded = 0;
@@ -855,15 +867,16 @@
                         this.imagesLoaded++;
                         if (this.imagesLoaded === this.totalImages) {
                             this.allImagesLoaded = true;
+                            this.activeBackgroundImage = this.images.backgroundDimA; // Set initial background
                             console.log("All images loaded successfully.");
                         }
                     };
                     this.images[key].onerror = () => {
-                         // Log error, but still count towards loaded total to eventually start game
                         console.error(`Failed to load image: ${key} at ${this.imageSources[key]}`);
                         this.imagesLoaded++;
                          if (this.imagesLoaded === this.totalImages) {
-                             this.allImagesLoaded = true; // Allow game start even with missing images (will use fallbacks)
+                             this.allImagesLoaded = true; 
+                             this.activeBackgroundImage = this.images.backgroundDimA; // Still set default if some fail
                              console.warn("Finished loading images, but some failed.");
                          }
                     };
@@ -871,46 +884,38 @@
                 }
             }
 
-            // Method to get canvas context safely
             getCtx() {
-                // Try to get context if it hasn't been retrieved yet or if canvas was recreated
                  if (!this.ctx && this.ui.canvas) {
                     this.ctx = this.ui.canvas.getContext('2d');
                     if(!this.ctx){
                          console.error("Failed to get 2D context from canvas.");
                     }
                  }
-                 // Return the stored context (might be null if retrieval failed)
                  return this.ctx;
             }
 
 
             setupEventListeners() {
-                // Debounced resize handler
                 let resizeTimeout;
                 window.addEventListener("resize", () => {
                     clearTimeout(resizeTimeout);
                     resizeTimeout = setTimeout(() => {
-                        this.ui.adjustGameContainerLayout(); // Use the layout adjuster on resize
-                        // Update player position if needed after resize (e.g., re-center)
+                        this.ui.adjustGameContainerLayout(); 
                         const canvasWidth = this.ui.canvas.width;
                         const canvasHeight = this.ui.canvas.height;
                         if(canvasWidth && canvasHeight && this.player){
                             this.player.x = Math.max(this.player.size / 2, Math.min(canvasWidth - this.player.size / 2, this.player.x));
                             this.player.y = Math.max(this.player.size / 2, Math.min(canvasHeight - this.player.size / 2, this.player.y));
                         }
-                    }, 150); // Slightly longer debounce
+                    }, 150); 
                  });
 
-                // Mouse Events
                 window.addEventListener("mousemove", (e) => {
-                     // Calculate mouse position relative to the canvas
                      const rect = this.ui.canvas.getBoundingClientRect();
                      this.mouseX = e.clientX - rect.left;
                      this.mouseY = e.clientY - rect.top;
                  });
                 window.addEventListener("mousedown", (e) => {
-                    // Only trigger shooting if click is inside the canvas/game area
                      const rect = this.ui.canvas.getBoundingClientRect();
                      if(e.clientX >= rect.left && e.clientX <= rect.right &&
                         e.clientY >= rect.top && e.clientY <= rect.bottom) {
@@ -920,19 +925,22 @@
                 window.addEventListener("mouseup", (e) => {
                     if (e.button === 0) this.isShooting = false;
                 });
-                 // Prevent context menu on right-click within game area
                  this.ui.gameContainer.addEventListener('contextmenu', e => e.preventDefault());
 
-                // Keyboard Events
                 window.addEventListener("keydown", (e) => {
                     if (e.key === "w" || e.key === "W") this.keys.w = true;
                     if (e.key === "a" || e.key === "A") this.keys.a = true;
                     if (e.key === "s" || e.key === "S") this.keys.s = true;
                     if (e.key === "d" || e.key === "D") this.keys.d = true;
-                    // Allow upgrades/tower placement only if game is running and not over
+                    if (e.key === "q" || e.key === "Q") this.keys.q = true; // Listen for Q
+
                     if (!this.gameOver) {
                          if (e.key === "1") this.upgradeFireRate();
                          if (e.key === "2") this.placeTower();
+                         if (this.keys.q) { // Use the state of this.keys.q
+                            this.switchDimension();
+                            this.keys.q = false; // Reset after action to prevent rapid switching on hold
+                         }
                     }
                 });
                 window.addEventListener("keyup", (e) => {
@@ -940,12 +948,11 @@
                     if (e.key === "a" || e.key === "A") this.keys.a = false;
                     if (e.key === "s" || e.key === "S") this.keys.s = false;
                     if (e.key === "d" || e.key === "D") this.keys.d = false;
+                    // No need to set this.keys.q to false on keyup if it's consumed on keydown
                 });
 
-                // Touch Events for Shooting / Aiming (on the game container area)
                  const gameArea = this.ui.gameContainer;
                  gameArea.addEventListener("touchstart", (e) => {
-                      // Check if touch is NOT on joystick or action buttons
                       let targetElement = e.target;
                       let isControl = false;
                       while(targetElement && targetElement !== gameArea){
@@ -958,7 +965,7 @@
 
                       if (!isControl) {
                          e.preventDefault();
-                         this.isTouching = true; // Mark that a touch is active for shooting/aiming
+                         this.isTouching = true; 
                          this.isShooting = true;
                          const touch = e.touches[0];
                          const rect = this.ui.canvas.getBoundingClientRect();
@@ -968,7 +975,7 @@
                  }, { passive: false });
 
                  gameArea.addEventListener("touchmove", (e) => {
-                      if (this.isTouching) { // Only update aim if the initial touch was for aiming
+                      if (this.isTouching) { 
                          e.preventDefault();
                          const touch = e.touches[0];
                          const rect = this.ui.canvas.getBoundingClientRect();
@@ -978,21 +985,17 @@
                  }, { passive: false });
 
                  gameArea.addEventListener("touchend", (e) => {
-                     // Check if the touch ending is the one used for aiming/shooting
                      let aimingTouchEnded = false;
                      for (let i = 0; i < e.changedTouches.length; i++) {
                          const touch = e.changedTouches[i];
                          const rect = this.ui.canvas.getBoundingClientRect();
                          const endX = touch.clientX - rect.left;
                          const endY = touch.clientY - rect.top;
-                         // Simple check: was the ending touch near the last aiming touch position?
                          if (Math.abs(endX - this.touchX) < 50 && Math.abs(endY - this.touchY) < 50) {
                             aimingTouchEnded = true;
                             break;
                          }
                      }
-
-                     // Also consider if *no* touches remain on the aiming area
                      let remainingAimingTouches = 0;
                      for (let i = 0; i < e.touches.length; i++) {
                         let targetElement = e.touches[i].target;
@@ -1006,27 +1009,23 @@
                         }
                         if (!isControl) remainingAimingTouches++;
                      }
-
                       if (this.isTouching && (aimingTouchEnded || remainingAimingTouches === 0)) {
                          this.isTouching = false;
                          this.isShooting = false;
                      }
                  }, { passive: false });
 
-
-                // Joystick Events
                 const joystickBase = document.getElementById("joystick-base");
                 const joystickHandle = this.ui.joystickHandle;
-                 let joystickTouchId = null; // Track the touch ID controlling the joystick
+                 let joystickTouchId = null; 
 
-                 if(joystickBase && joystickHandle){ // Ensure elements exist
+                 if(joystickBase && joystickHandle){ 
                      joystickBase.addEventListener("touchstart", (e) => {
                          e.preventDefault();
-                         e.stopPropagation(); // Prevent triggering game area touchstart
-                         if(joystickTouchId === null) { // Only track the first touch
+                         e.stopPropagation(); 
+                         if(joystickTouchId === null) { 
                              joystickTouchId = e.changedTouches[0].identifier;
                              this.joystickActive = true;
-                             // Optional: slightly enlarge joystick on touch?
                          }
                      }, { passive: false });
 
@@ -1034,8 +1033,6 @@
                          e.preventDefault();
                          e.stopPropagation();
                          if (!this.joystickActive) return;
-
-                          // Find the correct touch
                          let currentTouch = null;
                          for(let i=0; i<e.changedTouches.length; i++){
                              if(e.changedTouches[i].identifier === joystickTouchId){
@@ -1043,7 +1040,6 @@
                                  break;
                              }
                          }
-                         // Also check active touches if not found in changedTouches
                          if (!currentTouch) {
                              for(let i=0; i<e.touches.length; i++){
                                  if(e.touches[i].identifier === joystickTouchId){
@@ -1052,7 +1048,7 @@
                                  }
                              }
                          }
-                         if(!currentTouch) return; // Touch controlling joystick not found
+                         if(!currentTouch) return; 
 
                          const rect = joystickBase.getBoundingClientRect();
                          const centerX = rect.left + rect.width / 2;
@@ -1060,36 +1056,23 @@
                          let dx = currentTouch.clientX - centerX;
                          let dy = currentTouch.clientY - centerY;
                          const distance = Math.sqrt(dx * dx + dy * dy);
-                         const maxDistance = rect.width / 2; // Max distance from center
-
-                         // Clamp handle position to base radius
+                         const maxDistance = rect.width / 2; 
                           let clampedX = dx;
                           let clampedY = dy;
                          if (distance > maxDistance) {
                              clampedX = (dx / distance) * maxDistance;
                              clampedY = (dy / distance) * maxDistance;
                          }
-
-                         // Update handle position visually (relative to center) using translate
                          joystickHandle.style.transform = `translate(-50%, -50%) translate(${clampedX}px, ${clampedY}px)`;
-
-
-                         // Calculate normalized joystick values (-1 to 1) based on clamped position
-                          // handleMaxTravel is the radius the center of the handle can move
                           const handleRadius = joystickHandle.offsetWidth / 2;
-                          const handleMaxTravel = maxDistance - handleRadius; // Max distance handle center can move
-
+                          const handleMaxTravel = maxDistance - handleRadius; 
                          this.joystickX = (handleMaxTravel > 0) ? clampedX / handleMaxTravel : 0;
                          this.joystickY = (handleMaxTravel > 0) ? clampedY / handleMaxTravel : 0;
-
-                         // Clamp values explicitly
                          this.joystickX = Math.max(-1, Math.min(1, this.joystickX));
                          this.joystickY = Math.max(-1, Math.min(1, this.joystickY));
-
                      }, { passive: false });
 
                      const resetJoystickAndSound = (e) => {
-                          // Check if the touch ending/leaving is the one controlling the joystick
                          let relevantTouchEnded = false;
                           if (e && e.changedTouches) {
                               for(let i=0; i<e.changedTouches.length; i++){
@@ -1099,18 +1082,14 @@
                                   }
                               }
                           } else {
-                               // If called without event (e.g., from reset()), force reset
                                relevantTouchEnded = true;
                            }
-
-
                          if (this.joystickActive && relevantTouchEnded) {
                              this.joystickActive = false;
                              this.joystickX = 0;
                              this.joystickY = 0;
-                             joystickHandle.style.transform = 'translate(-50%, -50%)'; // Reset visual position
-                             joystickTouchId = null; // Release touch ID
-
+                             joystickHandle.style.transform = 'translate(-50%, -50%)'; 
+                             joystickTouchId = null; 
                              if (this.moveSoundPlaying) {
                                  this.ui.sounds.shipMove.pause();
                                  this.ui.sounds.shipMove.currentTime = 0;
@@ -1118,31 +1097,22 @@
                              }
                          }
                      };
-
                      joystickBase.addEventListener("touchend", (e) => {
                          e.preventDefault();
                           e.stopPropagation();
                          resetJoystickAndSound(e);
                      }, { passive: false });
-                      // Add touchleave/cancel for robustness
                       joystickBase.addEventListener("touchleave", resetJoystickAndSound, { passive: false });
                       joystickBase.addEventListener("touchcancel", resetJoystickAndSound, { passive: false });
-
                  } else {
                      console.warn("Joystick elements not found.");
                  }
 
-
-                // Action button listeners (using touchstart for responsiveness)
-                document.getElementById("turret-button")?.addEventListener("touchstart", (e) => {
-                    e.preventDefault(); e.stopPropagation(); this.placeTower();
-                }, { passive: false });
-                document.getElementById("upgrade-button")?.addEventListener("touchstart", (e) => {
-                    e.preventDefault(); e.stopPropagation(); this.upgradeFireRate();
-                }, { passive: false });
-
+                // Action button listeners
                 const turretButton = document.getElementById("turret-button");
                 const upgradeButton = document.getElementById("upgrade-button");
+                // The new dimension switch button listener will be added in Game.assignButtons
+
                 const handlePlaceTower = (e) => {
                     e.preventDefault(); e.stopPropagation(); this.placeTower();
                 }
@@ -1152,20 +1122,35 @@
 
                 if (turretButton) {
                     turretButton.addEventListener("touchstart", handlePlaceTower, { passive: false });
-                    turretButton.addEventListener("click", handlePlaceTower); // ADD CLICK LISTENER
+                    turretButton.addEventListener("click", handlePlaceTower); 
                 }
                 if (upgradeButton) {
                     upgradeButton.addEventListener("touchstart", handleUpgradeFireRate, { passive: false });
-                    upgradeButton.addEventListener("click", handleUpgradeFireRate); // ADD CLICK LISTENER
+                    upgradeButton.addEventListener("click", handleUpgradeFireRate); 
                 }
-
             }
+
+            switchDimension() {
+                if (!this.allImagesLoaded) return; // Don't switch if images (especially backgrounds) aren't ready
+
+                this.currentDimension = 1 - this.currentDimension; // Toggle 0 and 1
+                console.log("Switched to dimension:", this.currentDimension === 0 ? "A" : "B");
+
+                // Play switch sound
+                this.ui.sounds.dimensionSwitch?.play().catch(e => console.warn("Dimension switch sound play failed:", e));
+
+                // Change background image
+                this.activeBackgroundImage = (this.currentDimension === 0) ? this.images.backgroundDimA : this.images.backgroundDimB;
+                if (!this.activeBackgroundImage || !this.activeBackgroundImage.complete || this.activeBackgroundImage.naturalWidth === 0) {
+                    console.warn(`Background image for dimension ${this.currentDimension === 0 ? "A" : "B"} is not loaded or invalid.`);
+                }
+                // The draw() method will pick up activeBackgroundImage
+            }
+
 
             reset() {
                 this.gameOver = false;
-                // Ensure context is fetched if needed (e.g., for dimensions)
                 this.getCtx();
-                // Recalculate center based on current canvas dimensions
                 const canvasWidth = this.ui.canvas?.width || window.innerWidth;
                 const canvasHeight = this.ui.canvas?.height || window.innerHeight;
                 if(this.player) {
@@ -1173,85 +1158,76 @@
                   this.player.y = canvasHeight / 2;
                 }
 
-                this.playerHealth = this.maxPlayerHealth; // Reset health to max
-                this.enemies = []; // Clear arrays
-                this.projectiles = [];
-                this.coins = [];
-                this.towers = [];
-                this.asteroids = [];
-                this.debris = [];
-                this.mines = []; // Clear mines
+                this.currentDimension = 0; // Reset to Dimension A
+                if (this.allImagesLoaded) { // Ensure images are loaded before accessing
+                    this.activeBackgroundImage = this.images.backgroundDimA;
+                }
+
+
+                this.playerHealth = this.maxPlayerHealth; 
+                this.enemies = [[], []]; 
+                this.projectiles = [[], []];
+                this.coins = [[], []];
+                this.towers = [[], []];
+                this.asteroids = [[], []];
+                this.debris = [[], []];
+                this.mines = [[], []]; 
                 this.solarFlare = { active: false, warningTime: 0, duration: 0 };
                 this.coinCount = 0;
-                this.fireRate = 6; // Reset fire rate
-                this.startTime = null; // Reset timer start time
+                this.fireRate = 6; 
+                this.startTime = null; 
                 this.elapsedTime = 0;
-                this.lastFrameTime = performance.now(); // Reset frame time
+                this.lastFrameTime = performance.now(); 
                 this.timeSinceLastSpawn = 0;
                 this.timeSinceLastShot = 0;
                 this.timeSinceLastHazard = 0;
-                this.timeSinceLastZephyrScout = 5; // Reset timers
+                this.timeSinceLastZephyrScout = 5; 
                 this.timeSinceLastNebulaStalker = 10;
-                this.timeSinceLastVoidMineLayer = 15; // Reset timer
+                this.timeSinceLastVoidMineLayer = 15; 
 
                 this.joystickActive = false;
                 this.joystickX = 0;
                 this.joystickY = 0;
-                this.ui.resetJoystick(); // Visually reset joystick
+                this.ui.resetJoystick(); 
 
-                // Stop sounds
                  if (this.moveSoundPlaying) {
                      this.ui.sounds.shipMove.pause();
                      this.ui.sounds.shipMove.currentTime = 0;
                      this.moveSoundPlaying = false;
                  }
-                 // Stop other sounds if needed (background music is handled by UI swap)
             }
 
             movePlayer(deltaTime) {
                 this.isMoving = false;
-                const currentSpeed = this.player.speed; // Pixels per second
+                const currentSpeed = this.player.speed; 
                 const canvasWidth = this.ui.canvas?.width;
                 const canvasHeight = this.ui.canvas?.height;
-                if (!canvasWidth || !canvasHeight || !this.player) return; // Needed for boundary checks
+                if (!canvasWidth || !canvasHeight || !this.player) return; 
 
                 const playerHalfSize = this.player.size / 2;
-
                  let moveX = 0;
                  let moveY = 0;
 
-                 // Keyboard movement
                  if (this.keys.w) moveY -= 1;
                  if (this.keys.s) moveY += 1;
                  if (this.keys.a) moveX -= 1;
                  if (this.keys.d) moveX += 1;
 
-                 // Joystick movement overrides keyboard if active
                  if (this.joystickActive && (this.joystickX !== 0 || this.joystickY !== 0)) {
                      moveX = this.joystickX;
                      moveY = this.joystickY;
                  }
-
-                 // Check if any movement input exists
                  this.isMoving = (moveX !== 0 || moveY !== 0);
-
-                // Normalize the movement vector if necessary (avoids faster diagonal movement)
                  const magnitude = Math.sqrt(moveX * moveX + moveY * moveY);
-                 if (magnitude > 1) { // Normalize if magnitude > 1 (diagonal input)
+                 if (magnitude > 1) { 
                      moveX /= magnitude;
                      moveY /= magnitude;
                  }
-
-                 // Calculate displacement based on speed and deltaTime
                  const deltaMoveX = moveX * currentSpeed * deltaTime;
                  const deltaMoveY = moveY * currentSpeed * deltaTime;
-
-                // Update player position with boundary checks
                 this.player.x = Math.max(playerHalfSize, Math.min(canvasWidth - playerHalfSize, this.player.x + deltaMoveX));
                 this.player.y = Math.max(playerHalfSize, Math.min(canvasHeight - playerHalfSize, this.player.y + deltaMoveY));
 
-
-                // Sound handling
                 if (this.isMoving && !this.moveSoundPlaying) {
                     this.ui.sounds.shipMove.play().catch((error) => console.warn("Error playing ship move sound:", error));
                     this.moveSoundPlaying = true;
@@ -1263,123 +1239,97 @@
             }
 
             shootProjectile() {
-                 // Ensure player exists and canvas is available
                  if (!this.player || !this.ui.canvas) return;
-
-                 // Calculate angle based on mouse/touch position relative to player center
                  const angle = Math.atan2(this.mouseY - this.player.y, this.mouseX - this.player.x);
-                 const vx = Math.cos(angle) * this.projectileSpeed; // Use speed (pixels/sec)
+                 const vx = Math.cos(angle) * this.projectileSpeed; 
                  const vy = Math.sin(angle) * this.projectileSpeed;
 
-                 // Create projectile starting from player center
-                 this.projectiles.push({
+                 this.projectiles[this.currentDimension].push({ // Add to current dimension
                      x: this.player.x,
                      y: this.player.y,
-                     size: 5, // Projectile size
-                     vx, vy, // Velocity in pixels/sec
-                     type: 'playerShot', // Distinguish projectile type
-                     source: 'player' // Identify the source
+                     size: 5, 
+                     vx, vy, 
+                     type: 'playerShot', 
+                     source: 'player' 
                  });
-
-                 // Play sound effect
-                 // Clone node and play for rapid firing to avoid cutting off previous sound
                 const sound = this.ui.sounds.shipShoot;
                 if (sound) {
                     const clone = sound.cloneNode();
-                    clone.volume = sound.volume; // Optional: ensure volume is copied
+                    clone.volume = sound.volume; 
                     clone.play().catch(e => console.warn("Shoot sound clone play failed", e));
                 }
             }
 
-             // *** FIX: Modified spawnEnemy to include VoidMineLayer ***
              spawnEnemy(deltaTime) {
                  const canvasWidth = this.ui.canvas?.width;
                  const canvasHeight = this.ui.canvas?.height;
-                 if (!canvasWidth || !canvasHeight) return; // Don't spawn if canvas size is invalid
+                 if (!canvasWidth || !canvasHeight) return; 
 
-                 // Increase spawn rate over time (adjust multiplier as needed)
-                 const timeMultiplier = 1 + (this.elapsedTime / 90); // Gradually increase rate over 90s
+                 const timeMultiplier = 1 + (this.elapsedTime / 90); 
                  const currentSpawnRate = this.spawnRate * timeMultiplier;
 
-                 // Spawn Zephyr Scouts
                  this.timeSinceLastZephyrScout += deltaTime;
-                 const zephyrInterval = 2.0 / currentSpawnRate; // Average interval decreases
+                 const zephyrInterval = 2.0 / currentSpawnRate; 
                  if (this.timeSinceLastZephyrScout >= zephyrInterval) {
                      this.spawnSpecificEnemy('zephyrScout');
-                     // Add some randomness to next spawn time
-                     this.timeSinceLastZephyrScout = (Math.random() - 0.25) * zephyrInterval; // Reset timer with variance
+                     this.timeSinceLastZephyrScout = (Math.random() - 0.25) * zephyrInterval; 
                  }
 
-                 // Spawn Nebula Stalkers less frequently
                  this.timeSinceLastNebulaStalker += deltaTime;
-                  const nebulaInterval = 6.0 / currentSpawnRate; // Average interval decreases
+                  const nebulaInterval = 6.0 / currentSpawnRate; 
                  if (this.timeSinceLastNebulaStalker >= nebulaInterval) {
                      this.spawnSpecificEnemy('nebulaStalker');
-                     this.timeSinceLastNebulaStalker = (Math.random() - 0.25) * nebulaInterval; // Reset timer with variance
+                     this.timeSinceLastNebulaStalker = (Math.random() - 0.25) * nebulaInterval; 
                  }
 
-                 // Spawn Void Mine Layers even less frequently
                  this.timeSinceLastVoidMineLayer += deltaTime;
-                 const mineLayerInterval = 18.0 / timeMultiplier; // Becomes more frequent over time
-                 if (this.timeSinceLastVoidMineLayer >= mineLayerInterval && this.elapsedTime > 45) { // Start after 45 seconds
+                 const mineLayerInterval = 18.0 / timeMultiplier; 
+                 if (this.timeSinceLastVoidMineLayer >= mineLayerInterval && this.elapsedTime > 45) { 
                      this.spawnSpecificEnemy('voidMineLayer');
-                     this.timeSinceLastVoidMineLayer = (Math.random() - 0.1) * mineLayerInterval; // Reset timer with variance
+                     this.timeSinceLastVoidMineLayer = (Math.random() - 0.1) * mineLayerInterval; 
                  }
              }
 
             spawnSpecificEnemy(type) {
                  const canvasWidth = this.ui.canvas.width;
                  const canvasHeight = this.ui.canvas.height;
-                 const spawnMargin = 50; // Distance outside the screen edge to spawn
-
+                 const spawnMargin = 50; 
                  const side = Math.floor(Math.random() * 4);
                  let x, y;
-
                  switch (side) {
-                     case 0: // Top
-                         x = Math.random() * canvasWidth; y = -spawnMargin; break;
-                     case 1: // Right
-                         x = canvasWidth + spawnMargin; y = Math.random() * canvasHeight; break;
-                     case 2: // Bottom
-                         x = Math.random() * canvasWidth; y = canvasHeight + spawnMargin; break;
-                     case 3: // Left
-                         x = -spawnMargin; y = Math.random() * canvasHeight; break;
+                     case 0: x = Math.random() * canvasWidth; y = -spawnMargin; break;
+                     case 1: x = canvasWidth + spawnMargin; y = Math.random() * canvasHeight; break;
+                     case 2: x = Math.random() * canvasWidth; y = canvasHeight + spawnMargin; break;
+                     case 3: x = -spawnMargin; y = Math.random() * canvasHeight; break;
                  }
-
                  const enemyData = this.enemyTypes[type];
                  if (!enemyData) {
                      console.warn(`Enemy type ${type} not found.`);
                      return;
                  }
-
-                 // Create enemy object with base stats from enemyData
                  const newEnemy = {
                      x, y, type,
                      health: enemyData.health,
-                     speed: enemyData.speed, // Base speed (pixels/sec)
+                     speed: enemyData.speed, 
                      damageToPlayer: enemyData.damageToPlayer,
                      damageToTower: enemyData.damageToTower,
                  };
-
-                 // Add type-specific properties dynamically
                   if (type === 'zephyrScout') {
                      newEnemy.zigzagTimer = 0;
                      newEnemy.zigzagDirection = (Math.random() < 0.5) ? 1 : -1;
                      newEnemy.zigzagAmplitude = enemyData.zigzagAmplitude;
                  } else if (type === 'nebulaStalker') {
-                     newEnemy.circleRadius = enemyData.circleRadius + (Math.random() * 100 - 50); // Add some variance
+                     newEnemy.circleRadius = enemyData.circleRadius + (Math.random() * 100 - 50); 
                      newEnemy.circleAngle = Math.random() * Math.PI * 2;
-                     newEnemy.shotTimer = Math.random() * enemyData.shootInterval; // Random initial shot timer
+                     newEnemy.shotTimer = Math.random() * enemyData.shootInterval; 
                      newEnemy.projectileSpeed = enemyData.projectileSpeed;
                      newEnemy.shootInterval = enemyData.shootInterval;
                  } else if (type === 'voidMineLayer') {
-                     newEnemy.mineTimer = Math.random() * enemyData.mineInterval; // Random initial mine timer
+                     newEnemy.mineTimer = Math.random() * enemyData.mineInterval; 
                      newEnemy.mineInterval = enemyData.mineInterval;
-                     newEnemy.damageToEnemies = enemyData.damageToEnemies; // Add enemy damage property
+                     newEnemy.damageToEnemies = enemyData.damageToEnemies; 
                  }
-                 // Add other enemy type initializations here...
-
-                 this.enemies.push(newEnemy);
+                 this.enemies[this.currentDimension].push(newEnemy); // Add to current dimension
              }
 
 
@@ -1387,36 +1337,28 @@
                 const canvasWidth = this.ui.canvas?.width;
                 const canvasHeight = this.ui.canvas?.height;
                 if (!canvasWidth || !canvasHeight) return;
-
-                const spawnMargin = this.asteroidSize; // Spawn further out
+                const spawnMargin = this.asteroidSize; 
                 const side = Math.floor(Math.random() * 4);
                 let x, y;
-
-                // Spawn outside the view
                 switch (side) {
                      case 0: x = Math.random() * canvasWidth; y = -spawnMargin; break;
                      case 1: x = canvasWidth + spawnMargin; y = Math.random() * canvasHeight; break;
                      case 2: x = Math.random() * canvasWidth; y = canvasHeight + spawnMargin; break;
                      case 3: x = -spawnMargin; y = Math.random() * canvasHeight; break;
                 }
-
-                // Target a point roughly within the opposite half of the screen
                  let targetX = Math.random() * canvasWidth;
                  let targetY = Math.random() * canvasHeight;
-                  // Simple targeting towards general center area
-                 targetX = canvasWidth / 2 + (Math.random() - 0.5) * canvasWidth * 0.6; // Wider target area
+                 targetX = canvasWidth / 2 + (Math.random() - 0.5) * canvasWidth * 0.6; 
                  targetY = canvasHeight / 2 + (Math.random() - 0.5) * canvasHeight * 0.6;
-
                 const angle = Math.atan2(targetY - y, targetX - x);
-                const speed = this.asteroidBaseSpeed * (Math.random() * 0.8 + 0.6); // Random speed (60% to 140% of base)
-
-                this.asteroids.push({
+                const speed = this.asteroidBaseSpeed * (Math.random() * 0.8 + 0.6); 
+                this.asteroids[this.currentDimension].push({ // Add to current dimension
                     x, y,
-                    vx: Math.cos(angle) * speed, // pixels/sec
-                    vy: Math.sin(angle) * speed, // pixels/sec
-                    health: this.asteroidHealth, // Use defined health
-                    rotation: Math.random() * Math.PI * 2, // Random initial rotation
-                    rotationSpeed: (Math.random() - 0.5) * 1.0 // Radians per second
+                    vx: Math.cos(angle) * speed, 
+                    vy: Math.sin(angle) * speed, 
+                    health: this.asteroidHealth, 
+                    rotation: Math.random() * Math.PI * 2, 
+                    rotationSpeed: (Math.random() - 0.5) * 1.0 
                 });
             }
 
@@ -1424,38 +1366,30 @@
                 const canvasWidth = this.ui.canvas?.width;
                 const canvasHeight = this.ui.canvas?.height;
                  if (!canvasWidth || !canvasHeight) return;
-                 const numParticles = 30; // More particles
-                 const speed = this.debrisBaseSpeed; // Debris speed (pixels/sec)
-                 const spread = 80; // Area spread
-
+                 const numParticles = 30; 
+                 const speed = this.debrisBaseSpeed; 
+                 const spread = 80; 
                  const side = Math.floor(Math.random() * 4);
                  let startX, startY, baseVX, baseVY;
-
                  switch (side) {
                      case 0: startX = Math.random() * canvasWidth; startY = -spread; baseVX = 0; baseVY = speed; break;
                      case 1: startX = canvasWidth + spread; startY = Math.random() * canvasHeight; baseVX = -speed; baseVY = 0; break;
                      case 2: startX = Math.random() * canvasWidth; startY = canvasHeight + spread; baseVX = 0; baseVY = -speed; break;
                      case 3: startX = -spread; startY = Math.random() * canvasHeight; baseVX = speed; baseVY = 0; break;
                  }
-
                  for (let i = 0; i < numParticles; i++) {
-                     // Add random velocity components for spread
-                      const angleOffset = (Math.random() - 0.5) * 1.2; // Wider angle variance
-                      const speedMultiplier = (Math.random() * 0.5 + 0.75); // 75% to 125% speed variance
-
-                     // Rotate base velocity slightly
+                      const angleOffset = (Math.random() - 0.5) * 1.2; 
+                      const speedMultiplier = (Math.random() * 0.5 + 0.75); 
                       const cosA = Math.cos(angleOffset);
                       const sinA = Math.sin(angleOffset);
                       let particleVX = (baseVX * cosA - baseVY * sinA) * speedMultiplier;
                       let particleVY = (baseVX * sinA + baseVY * cosA) * speedMultiplier;
-
-
-                     this.debris.push({
+                     this.debris[this.currentDimension].push({ // Add to current dimension
                          x: startX + Math.random() * spread - spread / 2,
                          y: startY + Math.random() * spread - spread / 2,
-                         vx: particleVX, // pixels/sec
-                         vy: particleVY, // pixels/sec
-                         lifespan: Math.random() * 2 + 3 // Particles last 3-5 seconds
+                         vx: particleVX, 
+                         vy: particleVY, 
+                         lifespan: Math.random() * 2 + 3 
                      });
                  }
                  this.ui.sounds.debris.play().catch((error) => console.warn("Error playing debris sound:", error));
@@ -1463,16 +1397,15 @@
 
             triggerSolarFlare() {
                 if (!this.solarFlare.active && this.solarFlare.warningTime <= 0) {
-                    this.solarFlare.warningTime = 3; // 3-second warning
+                    this.solarFlare.warningTime = 3; 
                     this.ui.sounds.solarFlare.play().catch((error) => console.warn("Error playing solar flare sound:", error));
                 }
             }
 
             dropCoin(x, y) {
-                 // Add small random offset to drop position
                  const offsetX = Math.random() * 20 - 10;
                  const offsetY = Math.random() * 20 - 10;
-                 this.coins.push({
+                 this.coins[this.currentDimension].push({ // Add to current dimension
                      x: x + offsetX,
                      y: y + offsetY,
                  });
@@ -1482,13 +1415,11 @@
                 const cost = 5;
                 if (this.coinCount >= cost) {
                     this.coinCount -= cost;
-                    this.fireRate *= 1.15; // Stronger upgrade
+                    this.fireRate *= 1.15; 
                     this.ui.sounds.attackUpgrade.play().catch((error) => console.warn("Error playing attack upgrade sound:", error));
-                    // Update button text if needed (optional)
                      const upgradeButton = document.getElementById('upgrade-button');
-                     if (upgradeButton) upgradeButton.textContent = `Upgrade Fire Rate (${cost})`; // Keep cost displayed
+                     if (upgradeButton) upgradeButton.textContent = `Upgrade Fire Rate (${cost})`; 
                 } else {
-                    // Optional: Play insufficient funds sound or visual feedback
                      console.log("Not enough coins to upgrade fire rate.");
                 }
             }
@@ -1497,56 +1428,44 @@
                 const cost = 10;
                 if (this.coinCount >= cost) {
                     this.coinCount -= cost;
-                    this.towers.push({
+                    this.towers[this.currentDimension].push({ // Add to current dimension
                         x: this.player.x,
                         y: this.player.y,
-                        timeSinceLastShot: 0, // Reset shot timer for new tower
-                        health: this.towerHealth // Assign initial health
+                        timeSinceLastShot: 0, 
+                        health: this.towerHealth 
                     });
                     this.ui.sounds.turretPlacement.play().catch((error) => console.warn("Error playing turret placement sound:", error));
-                     // Update button text (optional)
                      const turretButton = document.getElementById('turret-button');
-                     if (turretButton) turretButton.textContent = `Place Turret (${cost})`; // Keep cost displayed
+                     if (turretButton) turretButton.textContent = `Place Turret (${cost})`; 
                 } else {
-                     // Optional: Play insufficient funds sound or visual feedback
                      console.log("Not enough coins to place tower.");
                 }
             }
 
             updateEnemies(deltaTime) {
-                 for (let i = this.enemies.length - 1; i >= 0; i--) {
-                     const enemy = this.enemies[i];
+                 const currentEnemies = this.enemies[this.currentDimension];
+                 for (let i = currentEnemies.length - 1; i >= 0; i--) {
+                     const enemy = currentEnemies[i];
                      const enemyData = this.enemyTypes[enemy.type];
-                     if (!enemyData) { // Skip if type is invalid (or remove enemy?)
+                     if (!enemyData) { 
                         console.warn(`Removing enemy with invalid type: ${enemy.type}`);
-                        this.enemies.splice(i, 1);
+                        currentEnemies.splice(i, 1);
                         continue;
                      };
-
-                     // Apply solar flare speed boost
-                      const currentEnemySpeed = this.solarFlare.active ? enemy.speed * 1.5 : enemy.speed; // Use enemy's base speed
-
-                     // Find target (player or closest tower)
+                      const currentEnemySpeed = this.solarFlare.active ? enemy.speed * 1.5 : enemy.speed; 
                      let target = null;
-                     let minDistSq = Infinity; // Use squared distance for efficiency
-
-                     // Check player distance only if player is alive
+                     let minDistSq = Infinity; 
                      if (this.playerHealth > 0 && this.player) {
                          target = this.player;
                         minDistSq = (this.player.x - enemy.x)**2 + (this.player.y - enemy.y)**2;
                      }
-
-                     // Check tower distances
-                     this.towers.forEach(tower => {
+                     this.towers[this.currentDimension].forEach(tower => { // Check towers in current dimension
                          const distSq = (tower.x - enemy.x)**2 + (tower.y - enemy.y)**2;
-                          // Target tower only if it's closer than the player or if player is dead
                          if (distSq < minDistSq) {
                              minDistSq = distSq;
                              target = tower;
                          }
                      });
-
-                     // Update behavior based on type if a target exists
                      if (target) {
                          if (enemy.type === 'zephyrScout') {
                              this.updateZephyrScout(enemy, target, currentEnemySpeed, deltaTime);
@@ -1555,26 +1474,20 @@
                          } else if (enemy.type === 'voidMineLayer') {
                              this.updateVoidMineLayer(enemy, target, currentEnemySpeed, deltaTime);
                          }
-                         // Add other enemy type updates here...
-                         // else if (enemy.type === 'solarCharger') { ... }
                           else {
-                              // Default basic movement towards target for unimplemented types
                               const angle = Math.atan2(target.y - enemy.y, target.x - enemy.x);
                               enemy.x += Math.cos(angle) * currentEnemySpeed * deltaTime;
                               enemy.y += Math.sin(angle) * currentEnemySpeed * deltaTime;
                           }
                      } else {
-                         // Optional: Behavior when no target (e.g., move slowly off-screen)
-                         // Example: drift slowly if offscreen
                          const canvasWidth = this.ui.canvas?.width || 800;
                          const canvasHeight = this.ui.canvas?.height || 600;
                          if (enemy.x < 0 || enemy.x > canvasWidth || enemy.y < 0 || enemy.y > canvasHeight) {
-                            const angle = Math.atan2(canvasHeight/2 - enemy.y, canvasWidth/2 - enemy.x); // Angle towards center
+                            const angle = Math.atan2(canvasHeight/2 - enemy.y, canvasWidth/2 - enemy.x); 
                             enemy.x += Math.cos(angle) * enemy.speed * 0.5 * deltaTime;
                             enemy.y += Math.sin(angle) * enemy.speed * 0.5 * deltaTime;
                          }
                      }
-
                  }
              }
 
@@ -1582,36 +1495,21 @@
             updateZephyrScout(enemy, target, speed, deltaTime) {
                  const enemyData = this.enemyTypes.zephyrScout;
                  enemy.zigzagTimer += deltaTime;
-
-                 // Zigzag direction change
-                 if (enemy.zigzagTimer >= 1.0) { // Change direction every 1 second
+                 if (enemy.zigzagTimer >= 1.0) { 
                      enemy.zigzagDirection *= -1;
                      enemy.zigzagTimer = 0;
                  }
-
-                 // Vector towards target
                  const dx = target.x - enemy.x;
                  const dy = target.y - enemy.y;
                  const distance = Math.sqrt(dx * dx + dy * dy);
-
-                 if (distance < 1) return; // Avoid division by zero / jitter
-
-                 // Normalized direction vector
+                 if (distance < 1) return; 
                  const normX = dx / distance;
                  const normY = dy / distance;
-
-                 // Perpendicular vector for zigzag (rotate direction vector 90 degrees)
                  const perpX = -normY;
                  const perpY = normX;
-
-                 // Zigzag displacement for this frame
-                 // Scale amplitude by deltaTime? No, speed * deltaTime handles frame independence
-                 const zigzagSpeed = enemyData.zigzagAmplitude; // Treat amplitude as speed sideways
+                 const zigzagSpeed = enemyData.zigzagAmplitude; 
                  const zigzagDisplacementX = perpX * zigzagSpeed * enemy.zigzagDirection;
                  const zigzagDisplacementY = perpY * zigzagSpeed * enemy.zigzagDirection;
-
-
-                 // Combine forward movement and zigzag movement
                  enemy.x += (normX * speed + zigzagDisplacementX) * deltaTime;
                  enemy.y += (normY * speed + zigzagDisplacementY) * deltaTime;
              }
@@ -1620,73 +1518,50 @@
                  const enemyData = this.enemyTypes.nebulaStalker;
                  const targetDistSq = (target.x - enemy.x)**2 + (target.y - enemy.y)**2;
                  const targetDist = Math.sqrt(targetDistSq);
-
-                 // --- Shooting Logic ---
                  enemy.shotTimer += deltaTime;
                  if (enemy.shotTimer >= enemyData.shootInterval) {
                      const angleToTarget = Math.atan2(target.y - enemy.y, target.x - enemy.x);
-                     const vx = Math.cos(angleToTarget) * enemyData.projectileSpeed; // Use defined projectile speed (pixels/sec)
+                     const vx = Math.cos(angleToTarget) * enemyData.projectileSpeed; 
                      const vy = Math.sin(angleToTarget) * enemyData.projectileSpeed;
-                     this.projectiles.push({
+                     this.projectiles[this.currentDimension].push({ // Add to current dimension
                          x: enemy.x, y: enemy.y, size: 8, vx, vy,
-                         type: 'nebulaShot', source: 'enemy', // Mark as nebula shot
-                          // Add homing properties
-                         targetX: target.x, targetY: target.y // Store target position at time of firing for basic homing
+                         type: 'nebulaShot', source: 'enemy', 
+                         targetX: target.x, targetY: target.y 
                      });
-                     enemy.shotTimer = 0; // Reset timer
+                     enemy.shotTimer = 0; 
                  }
-
-                 // --- Movement Logic: Spiral Inwards ---
                   const desiredRadius = enemy.circleRadius;
-                  const radiusDecrement = 15 * deltaTime; // Rate at which radius decreases per second
-                  const minRadius = 80; // Minimum circling radius
+                  const radiusDecrement = 15 * deltaTime; 
+                  const minRadius = 80; 
                   enemy.circleRadius = Math.max(minRadius, enemy.circleRadius - radiusDecrement);
-
-                  // Angular speed (faster as it gets closer, but capped)
-                  const baseAngularSpeed = 0.8; // Radians per second at max radius
-                  const maxAngularSpeed = 2.5;  // Max radians per second
-                   // Increase speed more significantly as radius shrinks
+                  const baseAngularSpeed = 0.8; 
+                  const maxAngularSpeed = 2.5;  
                   const speedFactor = Math.max(1, (enemyData.circleRadius / Math.max(1, enemy.circleRadius))**1.5 );
                   const angularSpeed = Math.min(maxAngularSpeed, baseAngularSpeed * speedFactor);
-
-                  enemy.circleAngle += angularSpeed * deltaTime; // Update angle based on time
-
-                  // Calculate target position on the circle/spiral relative to the target entity
+                  enemy.circleAngle += angularSpeed * deltaTime; 
                   const targetSpiralX = target.x + Math.cos(enemy.circleAngle) * enemy.circleRadius;
                   const targetSpiralY = target.y + Math.sin(enemy.circleAngle) * enemy.circleRadius;
-
-                  // Move towards the target spiral position
                   const moveDx = targetSpiralX - enemy.x;
                   const moveDy = targetSpiralY - enemy.y;
                   const moveDist = Math.sqrt(moveDx*moveDx + moveDy*moveDy);
-
-                  if (moveDist > 1) { // Avoid jitter / division by zero
-                      // Adjust speed to smoothly reach the spiral position, faster than base speed
-                       const moveSpeed = speed * 1.5; // Move towards spiral point faster
+                  if (moveDist > 1) { 
+                       const moveSpeed = speed * 1.5; 
                       enemy.x += (moveDx / moveDist) * moveSpeed * deltaTime;
                       enemy.y += (moveDy / moveDist) * moveSpeed * deltaTime;
                   }
              }
 
-             // *** FIX: Added updateVoidMineLayer ***
              updateVoidMineLayer(enemy, target, speed, deltaTime) {
                  const enemyData = this.enemyTypes.voidMineLayer;
-
-                 // Basic movement towards target
                  const angle = Math.atan2(target.y - enemy.y, target.x - enemy.x);
                  enemy.x += Math.cos(angle) * speed * deltaTime;
                  enemy.y += Math.sin(angle) * speed * deltaTime;
-
-                 // Mine dropping logic
                  enemy.mineTimer += deltaTime;
-                 const activeMines = this.mines.length; // Count existing mines
-
+                 const activeMines = this.mines[this.currentDimension].length; // Check current dimension
                  if (enemy.mineTimer >= enemyData.mineInterval && activeMines < enemyData.maxMines) {
-                    // Drop mine slightly behind the enemy
                      const behindOffsetX = -Math.cos(angle) * (this.enemySize * 0.6);
                      const behindOffsetY = -Math.sin(angle) * (this.enemySize * 0.6);
-
-                     this.mines.push({
+                     this.mines[this.currentDimension].push({ // Add to current dimension
                          x: enemy.x + behindOffsetX,
                          y: enemy.y + behindOffsetY,
                          lifespan: enemyData.mineLifespan,
@@ -1695,10 +1570,10 @@
                          damageP: enemyData.damageToPlayer,
                          damageT: enemyData.damageToTower,
                          damageE: enemyData.damageToEnemies,
-                         warningTime: 1.0 // 1 second warning flash before exploding
+                         warningTime: 1.0 
                      });
-                     enemy.mineTimer = 0; // Reset timer
-                     this.ui.sounds.minePlace?.play().catch(e => console.warn(e)); // Play sound
+                     enemy.mineTimer = 0; 
+                     this.ui.sounds.minePlace?.play().catch(e => console.warn(e)); 
                  }
              }
 
@@ -1707,142 +1582,119 @@
                  const canvasWidth = this.ui.canvas?.width;
                  const canvasHeight = this.ui.canvas?.height;
                  if (!canvasWidth || !canvasHeight) return;
-
-                 for (let i = this.projectiles.length - 1; i >= 0; i--) {
-                     const proj = this.projectiles[i];
+                 const currentProjectiles = this.projectiles[this.currentDimension];
+                 for (let i = currentProjectiles.length - 1; i >= 0; i--) {
+                     const proj = currentProjectiles[i];
                      proj.x += proj.vx * deltaTime;
                      proj.y += proj.vy * deltaTime;
-
-                     // Homing for nebula shots (simple version: adjust velocity towards original target pos)
                      if (proj.type === 'nebulaShot') {
                          const angleToTarget = Math.atan2(proj.targetY - proj.y, proj.targetX - proj.x);
-                         const homingForce = 0.05; // How strongly it homes (reduced)
-                         // Adjust velocity slightly towards target - proportional to speed and delta time
+                         const homingForce = 0.05; 
                          proj.vx += Math.cos(angleToTarget) * this.enemyTypes.nebulaStalker.projectileSpeed * homingForce * deltaTime;
                          proj.vy += Math.sin(angleToTarget) * this.enemyTypes.nebulaStalker.projectileSpeed * homingForce * deltaTime;
-
-                         // Clamp projectile speed if homing accelerates it too much
                           const currentSpeedSq = proj.vx*proj.vx + proj.vy*proj.vy;
-                          const maxSpeedSq = (this.enemyTypes.nebulaStalker.projectileSpeed * 1.2)**2; // Allow slight speed up
+                          const maxSpeedSq = (this.enemyTypes.nebulaStalker.projectileSpeed * 1.2)**2; 
                           if(currentSpeedSq > maxSpeedSq){
                               const scale = Math.sqrt(maxSpeedSq / currentSpeedSq);
                               proj.vx *= scale;
                               proj.vy *= scale;
                           }
                      }
-
-                     // Remove projectiles going off-screen
-                      const margin = 50; // Wider Margin outside canvas
+                      const margin = 50; 
                      if (proj.x < -margin || proj.x > canvasWidth + margin || proj.y < -margin || proj.y > canvasHeight + margin) {
-                         this.projectiles.splice(i, 1);
+                         currentProjectiles.splice(i, 1);
                      }
                  }
              }
 
              updateTowers(deltaTime) {
-                 for (let i = this.towers.length - 1; i >= 0; i--) {
-                     const tower = this.towers[i];
+                 const currentTowers = this.towers[this.currentDimension];
+                 for (let i = currentTowers.length - 1; i >= 0; i--) {
+                     const tower = currentTowers[i];
                      tower.timeSinceLastShot += deltaTime;
-
-                     // Find nearest enemy within range
                      let nearestEnemy = null;
-                     let minDistSq = this.towerRange * this.towerRange; // Use squared range
-
-                     this.enemies.forEach(enemy => {
-                         // Ensure enemy target is valid (e.g., avoid targeting if enemy is somehow invalid)
+                     let minDistSq = this.towerRange * this.towerRange; 
+                     this.enemies[this.currentDimension].forEach(enemy => { // Check enemies in current dimension
                          if(!enemy || typeof enemy.x !== 'number' || typeof enemy.y !== 'number') return;
-
                          const distSq = (enemy.x - tower.x)**2 + (enemy.y - tower.y)**2;
                          if (distSq < minDistSq) {
                              minDistSq = distSq;
                              nearestEnemy = enemy;
                          }
                      });
-
-                     // Shoot if target found and ready
-                     const currentTowerFireInterval = 1 / (this.solarFlare.active ? this.towerFireRate / 1.5 : this.towerFireRate); // Adjust fire rate during flare
+                     const currentTowerFireInterval = 1 / (this.solarFlare.active ? this.towerFireRate / 1.5 : this.towerFireRate); 
                      if (nearestEnemy && tower.timeSinceLastShot >= currentTowerFireInterval) {
                          const angle = Math.atan2(nearestEnemy.y - tower.y, nearestEnemy.x - tower.x);
-                         const vx = Math.cos(angle) * this.projectileSpeed; // Use global projectile speed (pixels/sec)
+                         const vx = Math.cos(angle) * this.projectileSpeed; 
                          const vy = Math.sin(angle) * this.projectileSpeed;
-                         this.projectiles.push({
+                         this.projectiles[this.currentDimension].push({ // Add to current dimension
                              x: tower.x, y: tower.y, size: 5, vx, vy,
                              type: 'towerShot', source: 'turret'
                          });
-
-                         // Play sound using clone node approach
                          const sound = this.ui.sounds.turretShoot;
                          if (sound) {
                              const clone = sound.cloneNode();
-                             clone.volume = sound.volume * 0.8; // Tower shoot maybe quieter
+                             clone.volume = sound.volume * 0.8; 
                              clone.play().catch(e => console.warn("Tower shoot sound clone play failed", e));
                          }
-                         tower.timeSinceLastShot = 0; // Reset shot timer
+                         tower.timeSinceLastShot = 0; 
                      }
                  }
              }
 
-             updateHazards(deltaTime) {
+             updateHazards(deltaTime) { // This handles asteroids, debris, mines (now dimension-specific) and solar flare (global)
                  const canvasWidth = this.ui.canvas?.width;
                  const canvasHeight = this.ui.canvas?.height;
                  if (!canvasWidth || !canvasHeight) return;
 
-                 // Asteroids
-                 for (let i = this.asteroids.length - 1; i >= 0; i--) {
-                     const asteroid = this.asteroids[i];
+                 const currentAsteroids = this.asteroids[this.currentDimension];
+                 for (let i = currentAsteroids.length - 1; i >= 0; i--) {
+                     const asteroid = currentAsteroids[i];
                      asteroid.x += asteroid.vx * deltaTime;
                      asteroid.y += asteroid.vy * deltaTime;
                      asteroid.rotation += asteroid.rotationSpeed * deltaTime;
-
-                     // Remove if far off-screen
                       const margin = this.asteroidSize * 2;
                       if (asteroid.x < -margin || asteroid.x > canvasWidth + margin ||
                           asteroid.y < -margin || asteroid.y > canvasHeight + margin) {
-                          this.asteroids.splice(i, 1);
+                          currentAsteroids.splice(i, 1);
                       }
                  }
 
-                 // Debris
-                  for (let i = this.debris.length - 1; i >= 0; i--) {
-                      const particle = this.debris[i];
+                 const currentDebris = this.debris[this.currentDimension];
+                  for (let i = currentDebris.length - 1; i >= 0; i--) {
+                      const particle = currentDebris[i];
                       particle.x += particle.vx * deltaTime;
                       particle.y += particle.vy * deltaTime;
                       particle.lifespan -= deltaTime;
-
-                      // Remove if lifespan ended or off-screen
                       const pMargin = this.debrisSize * 2;
                       if (particle.lifespan <= 0 ||
                           particle.x < -pMargin || particle.x > canvasWidth + pMargin ||
                           particle.y < -pMargin || particle.y > canvasHeight + pMargin) {
-                          this.debris.splice(i, 1);
+                          currentDebris.splice(i, 1);
                       }
                   }
 
-                 // Mines
-                 for (let i = this.mines.length - 1; i >= 0; i--) {
-                      const mine = this.mines[i];
+                 const currentMines = this.mines[this.currentDimension];
+                 for (let i = currentMines.length - 1; i >= 0; i--) {
+                      const mine = currentMines[i];
                       mine.lifespan -= deltaTime;
-
                       if (mine.warningTime > 0 && mine.lifespan <= mine.warningTime) {
-                         mine.isWarning = true; // Flag for drawing flash
+                         mine.isWarning = true; 
                       }
-
                       if (mine.lifespan <= 0) {
-                          this.triggerMineExplosion(mine);
-                          this.mines.splice(i, 1);
+                          this.triggerMineExplosion(mine); // Pass the mine object
+                          currentMines.splice(i, 1);
                       }
                   }
 
-
-                 // Solar Flare Timer Logic
                  let hazardWarning = "";
                  if (this.solarFlare.warningTime > 0) {
                      this.solarFlare.warningTime -= deltaTime;
                      hazardWarning = `Solar Flare Warning: ${Math.ceil(this.solarFlare.warningTime)}s`;
                      if (this.solarFlare.warningTime <= 0) {
                          this.solarFlare.active = true;
-                         this.solarFlare.duration = 7; // Flare lasts 7 seconds
-                         this.solarFlare.warningTime = 0; // Ensure warning time is exactly 0
+                         this.solarFlare.duration = 7; 
+                         this.solarFlare.warningTime = 0; 
                      }
                  } else if (this.solarFlare.active) {
                      this.solarFlare.duration -= deltaTime;
@@ -1852,77 +1704,72 @@
                          this.solarFlare.duration = 0;
                      }
                  }
-                 // Pass warning to HUD update later
-                 this.currentHazardWarning = hazardWarning; // Store warning for HUD update
+                 this.currentHazardWarning = hazardWarning; 
 
-                 // Spawn new hazards
                  this.timeSinceLastHazard += deltaTime;
-                 if (this.timeSinceLastHazard >= (Math.random() * 8 + 12)) { // Spawn hazard every 12-20 seconds
+                 if (this.timeSinceLastHazard >= (Math.random() * 8 + 12)) { 
                      const hazardType = Math.random();
-                     if (hazardType < 0.4) { // 40% chance Asteroid
-                         this.spawnAsteroid();
-                     } else if (hazardType < 0.7) { // 30% chance Debris
-                         this.spawnDebris();
-                     } else { // 30% chance Solar Flare trigger
-                         this.triggerSolarFlare();
+                     if (hazardType < 0.4) { 
+                         this.spawnAsteroid(); // Spawns into current dimension
+                     } else if (hazardType < 0.7) { 
+                         this.spawnDebris(); // Spawns into current dimension
+                     } else { 
+                         this.triggerSolarFlare(); // Solar flare is global
                      }
                      this.timeSinceLastHazard = 0;
                  }
              }
 
-             // *** FIX: Added triggerMineExplosion ***
-             triggerMineExplosion(mine) {
+             triggerMineExplosion(mine) { // Mine object is passed
                  this.ui.sounds.mineExplode?.play().catch(e => console.warn(e));
-                 // Optional: Add visual explosion effect here (e.g., particle burst)
-
                  const explosionRadiusSq = mine.explosionRadius * mine.explosionRadius;
-
-                 // Check Player
                  if (this.playerHealth > 0 && this.player) {
                     const distSq = (this.player.x - mine.x)**2 + (this.player.y - mine.y)**2;
                     if (distSq < explosionRadiusSq) {
                         this.playerHealth -= mine.damageP;
                          if (this.playerHealth <= 0) {
                             this.playerHealth = 0;
-                            this.gameOver = true; // Game over check happens later
+                            this.gameOver = true; 
                          }
                     }
                  }
-                 // Check Towers
-                 this.towers.forEach((tower, index) => {
+                 this.towers[this.currentDimension].forEach((tower) => { // Check towers in current dimension
                       const distSq = (tower.x - mine.x)**2 + (tower.y - mine.y)**2;
                       if (distSq < explosionRadiusSq) {
                           tower.health -= mine.damageT;
-                          if (tower.health <= 0) {
-                             // Remove later in collision cleanup phase
-                          }
+                          // Tower removal handled in handleCollisions if health <= 0
                       }
                  });
-                 // Check Enemies
-                 this.enemies.forEach((enemy, index) => {
+                 this.enemies[this.currentDimension].forEach((enemy) => { // Check enemies in current dimension
                       const distSq = (enemy.x - mine.x)**2 + (enemy.y - mine.y)**2;
                       if (distSq < explosionRadiusSq) {
                           enemy.health -= mine.damageE;
-                          if (enemy.health <= 0) {
-                             // Remove later in collision cleanup phase, drop coin maybe?
-                          }
+                          // Enemy removal handled in handleCollisions if health <= 0
                       }
                  });
-
              }
 
 
             handleCollisions() {
-                 let playerHitThisFrame = false; // Prevent multiple hits per frame
-                 let destroyedTowersIndices = new Set(); // Track towers destroyed this frame
-                 let destroyedEnemiesIndices = new Set(); // Track enemies destroyed this frame
-                 let destroyedProjectilesIndices = new Set(); // Track projectiles destroyed this frame
+                 let playerHitThisFrame = false; 
+                 let destroyedTowersIndices = new Set(); 
+                 let destroyedEnemiesIndices = new Set(); 
+                 let destroyedProjectilesIndices = new Set(); 
                  let destroyedAsteroidsIndices = new Set();
                  let destroyedDebrisIndices = new Set();
                  let collectedCoinsIndices = new Set();
-                 let destroyedMinesIndices = new Set(); // Track destroyed mines
+                 let destroyedMinesIndices = new Set(); 
 
-                 // Helper for distance squared check
+                 // Get current dimension's entities
+                 const currentProjectiles = this.projectiles[this.currentDimension];
+                 const currentEnemies = this.enemies[this.currentDimension];
+                 const currentTowers = this.towers[this.currentDimension];
+                 const currentAsteroids = this.asteroids[this.currentDimension];
+                 const currentDebris = this.debris[this.currentDimension];
+                 const currentCoins = this.coins[this.currentDimension];
+                 const currentMines = this.mines[this.currentDimension];
+
+
                  const checkCollision = (x1, y1, x2, y2, size1, size2) => {
                      const dx = x1 - x2;
                      const dy = y1 - y2;
@@ -1931,306 +1778,252 @@
                      return distSq < collisionDist * collisionDist;
                  };
 
-                 // 1. Projectile vs Enemy
-                 this.projectiles.forEach((proj, i) => {
+                 currentProjectiles.forEach((proj, i) => {
                     if (!proj || destroyedProjectilesIndices.has(i)) return;
                     if (proj.source === 'player' || proj.source === 'turret') {
-                         this.enemies.forEach((enemy, j) => {
+                         currentEnemies.forEach((enemy, j) => {
                             if (!enemy || destroyedEnemiesIndices.has(j)) return;
                             if (checkCollision(proj.x, proj.y, enemy.x, enemy.y, proj.size, this.enemySize)) {
                                 enemy.health -= this.projectileDamage;
-                                destroyedProjectilesIndices.add(i); // Mark projectile for removal
-
+                                destroyedProjectilesIndices.add(i); 
                                 if (enemy.health <= 0) {
-                                    destroyedEnemiesIndices.add(j); // Mark enemy for removal
-                                    this.dropCoin(enemy.x, enemy.y);
+                                    destroyedEnemiesIndices.add(j); 
+                                    this.dropCoin(enemy.x, enemy.y); // Drops into current dimension
                                     this.ui.sounds.enemyDeath.play().catch(e => console.warn(e));
                                 }
-                                return; // Projectile hit, move to next projectile
+                                return; 
                             }
                          });
                     }
                  });
 
-                  // 2. Projectile vs Asteroid
-                  this.projectiles.forEach((proj, i) => {
+                  currentProjectiles.forEach((proj, i) => {
                       if (!proj || destroyedProjectilesIndices.has(i)) return;
                       if (proj.source === 'player' || proj.source === 'turret') {
-                         this.asteroids.forEach((asteroid, j) => {
+                         currentAsteroids.forEach((asteroid, j) => {
                              if (!asteroid || destroyedAsteroidsIndices.has(j)) return;
                              if (checkCollision(proj.x, proj.y, asteroid.x, asteroid.y, proj.size, this.asteroidSize)) {
                                  asteroid.health -= this.projectileDamage;
-                                 destroyedProjectilesIndices.add(i); // Mark projectile
-
+                                 destroyedProjectilesIndices.add(i); 
                                  if (asteroid.health <= 0) {
-                                     destroyedAsteroidsIndices.add(j); // Mark asteroid
-                                     // Heal player slightly, capped at max health
+                                     destroyedAsteroidsIndices.add(j); 
                                      this.playerHealth = Math.min(this.maxPlayerHealth, this.playerHealth + 1);
                                      this.ui.sounds.asteroidHit.play().catch(e => console.warn(e));
                                  } else {
-                                      this.ui.sounds.asteroidHit.play().catch(e => console.warn(e)); // Non-lethal hit sound
+                                      this.ui.sounds.asteroidHit.play().catch(e => console.warn(e)); 
                                  }
-                                 return; // Projectile hit
+                                 return; 
                              }
                          });
                      }
                   });
 
-                  // 2.5 Projectile vs Mine
-                   this.projectiles.forEach((proj, i) => {
+                   currentProjectiles.forEach((proj, i) => {
                        if (!proj || destroyedProjectilesIndices.has(i)) return;
-                       if (proj.source === 'player' || proj.source === 'turret') { // Only player/tower can shoot mines
-                           this.mines.forEach((mine, j) => {
-                               if (!mine || destroyedMinesIndices.has(j) || mine.lifespan <= 0) return; // Don't hit exploding/destroyed mines
+                       if (proj.source === 'player' || proj.source === 'turret') { 
+                           currentMines.forEach((mine, j) => {
+                               if (!mine || destroyedMinesIndices.has(j) || mine.lifespan <= 0) return; 
                                if (checkCollision(proj.x, proj.y, mine.x, mine.y, proj.size, mine.radius * 2)) {
-                                   destroyedProjectilesIndices.add(i); // Mark projectile
-                                   destroyedMinesIndices.add(j); // Mark mine for removal (defused)
-                                   // Optional: Play a defuse sound?
-                                   return; // Projectile hit
+                                   destroyedProjectilesIndices.add(i); 
+                                   destroyedMinesIndices.add(j); 
+                                   return; 
                                }
                            });
                        }
                    });
 
-
-                  // 3. Enemy Projectile vs Player
                    if (this.playerHealth > 0 && this.player && !playerHitThisFrame) {
-                      this.projectiles.forEach((proj, i) => {
+                      currentProjectiles.forEach((proj, i) => {
                            if (!proj || destroyedProjectilesIndices.has(i)) return;
                            if (proj.source === 'enemy') {
                                if (checkCollision(proj.x, proj.y, this.player.x, this.player.y, proj.size, this.player.size)) {
-                                   const damage = 1; // Define enemy projectile damage
+                                   const damage = 1; 
                                    this.playerHealth -= damage;
-                                   playerHitThisFrame = true; // Player was hit
-                                   destroyedProjectilesIndices.add(i); // Mark projectile
-                                   this.ui.sounds.asteroidHit.play().catch(e => console.warn(e)); // Placeholder hit sound
-                                   if (this.playerHealth <= 0) this.gameOver = true; // Set flag, handled later
-                                   return; // Process next projectile
+                                   playerHitThisFrame = true; 
+                                   destroyedProjectilesIndices.add(i); 
+                                   this.ui.sounds.asteroidHit.play().catch(e => console.warn(e)); 
+                                   if (this.playerHealth <= 0) this.gameOver = true; 
+                                   return; 
                                }
                            }
                        });
                    }
 
-                   // 4. Enemy Projectile vs Tower
-                   this.projectiles.forEach((proj, i) => {
+                   currentProjectiles.forEach((proj, i) => {
                        if (!proj || destroyedProjectilesIndices.has(i)) return;
                        if (proj.source === 'enemy') {
-                           this.towers.forEach((tower, j) => {
+                           currentTowers.forEach((tower, j) => {
                                if (!tower || destroyedTowersIndices.has(j)) return;
                                if (checkCollision(proj.x, proj.y, tower.x, tower.y, proj.size, this.towerSize)) {
-                                   const damage = 1; // Define enemy projectile damage to towers
+                                   const damage = 1; 
                                    tower.health -= damage;
-                                   destroyedProjectilesIndices.add(i); // Mark projectile
-
+                                   destroyedProjectilesIndices.add(i); 
                                    if (tower.health <= 0) {
-                                       destroyedTowersIndices.add(j); // Mark tower
+                                       destroyedTowersIndices.add(j); 
                                        this.ui.sounds.turretDeath.play().catch(e => console.warn(e));
-                                   } else {
-                                        // Play tower hit sound?
                                    }
-                                   return; // Projectile hit
+                                   return; 
                                }
                            });
                        }
                    });
 
-
-                 // 5. Enemy vs Player
                   if (this.playerHealth > 0 && this.player && !playerHitThisFrame) {
-                     this.enemies.forEach((enemy, i) => {
+                     currentEnemies.forEach((enemy, i) => {
                           if (!enemy || destroyedEnemiesIndices.has(i)) return;
                           if (checkCollision(enemy.x, enemy.y, this.player.x, this.player.y, this.enemySize, this.player.size)) {
-                             const damage = enemy.damageToPlayer || 1; // Use defined damage or default
+                             const damage = enemy.damageToPlayer || 1; 
                              this.playerHealth -= damage;
                              playerHitThisFrame = true;
-                             destroyedEnemiesIndices.add(i); // Mark enemy
-                             this.ui.sounds.enemyDeath.play().catch(e => console.warn(e)); // Enemy dies
-                             this.ui.sounds.asteroidHit.play().catch(e => console.warn(e)); // Player hit sound (placeholder)
+                             destroyedEnemiesIndices.add(i); 
+                             this.ui.sounds.enemyDeath.play().catch(e => console.warn(e)); 
+                             this.ui.sounds.asteroidHit.play().catch(e => console.warn(e)); 
                              if (this.playerHealth <= 0) this.gameOver = true;
                           }
                       });
                   }
 
-                 // 6. Enemy vs Tower
-                 this.enemies.forEach((enemy, i) => {
+                 currentEnemies.forEach((enemy, i) => {
                       if (!enemy || destroyedEnemiesIndices.has(i)) return;
-                      this.towers.forEach((tower, j) => {
+                      currentTowers.forEach((tower, j) => {
                           if (!tower || destroyedTowersIndices.has(j)) return;
                            if (checkCollision(enemy.x, enemy.y, tower.x, tower.y, this.enemySize, this.towerSize)) {
-                              const damage = enemy.damageToTower || 1; // Use defined damage or default
+                              const damage = enemy.damageToTower || 1; 
                               tower.health -= damage;
-                              destroyedEnemiesIndices.add(i); // Mark enemy
-                              this.ui.sounds.enemyDeath.play().catch(e => console.warn(e)); // Enemy dies
-
+                              destroyedEnemiesIndices.add(i); 
+                              this.ui.sounds.enemyDeath.play().catch(e => console.warn(e)); 
                               if (tower.health <= 0) {
-                                  destroyedTowersIndices.add(j); // Mark tower
+                                  destroyedTowersIndices.add(j); 
                                   this.ui.sounds.turretDeath.play().catch(e => console.warn(e));
-                              } else {
-                                   // Play tower hit sound?
                               }
-                              return; // Enemy collided, move to next enemy
+                              return; 
                            }
                       });
                   });
 
-                  // 7. Player vs Coin
                    if (this.playerHealth > 0 && this.player) {
-                      this.coins.forEach((coin, i) => {
+                      currentCoins.forEach((coin, i) => {
                            if (!coin || collectedCoinsIndices.has(i)) return;
                            if (checkCollision(this.player.x, this.player.y, coin.x, coin.y, this.player.size, this.coinSize)) {
-                              this.coinCount++;
-                              collectedCoinsIndices.add(i); // Mark coin
-                              // Play coin collect sound?
+                              this.coinCount++; // Global coin count
+                              collectedCoinsIndices.add(i); 
                           }
                       });
                    }
 
-                 // 8. Hazard Collisions
-
-                 // Asteroid vs Player
                   if (this.playerHealth > 0 && this.player && !playerHitThisFrame) {
-                     this.asteroids.forEach((asteroid, i) => {
+                     currentAsteroids.forEach((asteroid, i) => {
                          if (!asteroid || destroyedAsteroidsIndices.has(i)) return;
                           if (checkCollision(asteroid.x, asteroid.y, this.player.x, this.player.y, this.asteroidSize, this.player.size)) {
-                             this.playerHealth -= 2; // Asteroids deal more damage
+                             this.playerHealth -= 2; 
                              playerHitThisFrame = true;
-                             destroyedAsteroidsIndices.add(i); // Mark asteroid
-                             this.ui.sounds.asteroidHit.play().catch(e => console.warn(e)); // Play impact sound
+                             destroyedAsteroidsIndices.add(i); 
+                             this.ui.sounds.asteroidHit.play().catch(e => console.warn(e)); 
                              if (this.playerHealth <= 0) this.gameOver = true;
                           }
                       });
                   }
 
-                 // Asteroid vs Tower
-                  this.asteroids.forEach((asteroid, i) => {
+                  currentAsteroids.forEach((asteroid, i) => {
                        if (!asteroid || destroyedAsteroidsIndices.has(i)) return;
-                       this.towers.forEach((tower, j) => {
+                       currentTowers.forEach((tower, j) => {
                            if (!tower || destroyedTowersIndices.has(j)) return;
                            if (checkCollision(asteroid.x, asteroid.y, tower.x, tower.y, this.asteroidSize, this.towerSize)) {
-                               tower.health -= 2; // Asteroids damage towers
-                               destroyedAsteroidsIndices.add(i); // Mark asteroid
+                               tower.health -= 2; 
+                               destroyedAsteroidsIndices.add(i); 
                                this.ui.sounds.asteroidHit.play().catch(e => console.warn(e));
-
                                if (tower.health <= 0) {
-                                   destroyedTowersIndices.add(j); // Mark tower
+                                   destroyedTowersIndices.add(j); 
                                    this.ui.sounds.turretDeath.play().catch(e => console.warn(e));
                                }
-                               return; // Asteroid collided
+                               return; 
                            }
                        });
                    });
 
-                   // Debris vs Player
                     if (this.playerHealth > 0 && this.player && !playerHitThisFrame) {
-                       this.debris.forEach((particle, i) => {
+                       currentDebris.forEach((particle, i) => {
                             if (!particle || destroyedDebrisIndices.has(i)) return;
                            if (checkCollision(particle.x, particle.y, this.player.x, this.player.y, this.debrisSize, this.player.size)) {
-                               this.playerHealth -= 0.25; // Debris deals small damage per particle
+                               this.playerHealth -= 0.25; 
                                playerHitThisFrame = true;
-                               destroyedDebrisIndices.add(i); // Mark particle
+                               destroyedDebrisIndices.add(i); 
                                if (this.playerHealth <= 0) this.gameOver = true;
                            }
                        });
                    }
 
-                   // Debris vs Tower
-                    this.debris.forEach((particle, i) => {
+                    currentDebris.forEach((particle, i) => {
                         if (!particle || destroyedDebrisIndices.has(i)) return;
-                        this.towers.forEach((tower, j) => {
+                        currentTowers.forEach((tower, j) => {
                             if (!tower || destroyedTowersIndices.has(j)) return;
                             if (checkCollision(particle.x, particle.y, tower.x, tower.y, this.debrisSize, this.towerSize)) {
-                                tower.health -= 0.2; // Debris damages towers slightly
-                                destroyedDebrisIndices.add(i); // Mark particle
-
+                                tower.health -= 0.2; 
+                                destroyedDebrisIndices.add(i); 
                                 if (tower.health <= 0) {
-                                     destroyedTowersIndices.add(j); // Mark tower
+                                     destroyedTowersIndices.add(j); 
                                      this.ui.sounds.turretDeath.play().catch(e => console.warn(e));
                                 }
-                                return; // Particle collided
+                                return; 
                             }
                         });
                     });
 
-                 // --- Cleanup Phase ---
-                 // Remove marked items in reverse order to avoid index issues
                  const removeMarked = (list, markedSet) => {
                     if (markedSet.size === 0) return list;
-                    const indicesToRemove = Array.from(markedSet).sort((a, b) => b - a); // Sort descending
+                    const indicesToRemove = Array.from(markedSet).sort((a, b) => b - a); 
                     indicesToRemove.forEach(index => {
                         list.splice(index, 1);
                     });
-                    return list; // Return the modified list
+                    return list; 
                  };
 
-                 this.projectiles = removeMarked(this.projectiles, destroyedProjectilesIndices);
-                 this.enemies = removeMarked(this.enemies, destroyedEnemiesIndices);
-                 this.towers = removeMarked(this.towers, destroyedTowersIndices);
-                 this.asteroids = removeMarked(this.asteroids, destroyedAsteroidsIndices);
-                 this.debris = removeMarked(this.debris, destroyedDebrisIndices);
-                 this.coins = removeMarked(this.coins, collectedCoinsIndices);
-                 this.mines = removeMarked(this.mines, destroyedMinesIndices);
-
+                 this.projectiles[this.currentDimension] = removeMarked(currentProjectiles, destroyedProjectilesIndices);
+                 this.enemies[this.currentDimension] = removeMarked(currentEnemies, destroyedEnemiesIndices);
+                 this.towers[this.currentDimension] = removeMarked(currentTowers, destroyedTowersIndices);
+                 this.asteroids[this.currentDimension] = removeMarked(currentAsteroids, destroyedAsteroidsIndices);
+                 this.debris[this.currentDimension] = removeMarked(currentDebris, destroyedDebrisIndices);
+                 this.coins[this.currentDimension] = removeMarked(currentCoins, collectedCoinsIndices);
+                 this.mines[this.currentDimension] = removeMarked(currentMines, destroyedMinesIndices);
              }
 
 
             update(timestamp) {
-                if (this.gameOver) return; // Don't update if game is already over
-
-                 // Ensure context is available
+                if (this.gameOver) return; 
                  const ctx = this.getCtx();
                  if (!ctx) {
                     console.error("Canvas context not available. Stopping game update.");
-                    this.gameOver = true; // Stop the game if context is lost
+                    this.gameOver = true; 
                     return;
                  }
-
-                // Calculate deltaTime (time since last frame in seconds)
                  const currentTime = performance.now();
-                 // Use lastFrameTime if available, otherwise use currentTime to avoid large initial deltaTime
                  const deltaTime = (currentTime - (this.lastFrameTime || currentTime)) / 1000;
                  this.lastFrameTime = currentTime;
-
-                 // Update total elapsed time only if startTime is set
                  if(this.startTime === null) this.startTime = currentTime;
                  this.elapsedTime = (currentTime - this.startTime) / 1000;
-
-
-                 // Limit maximum deltaTime to prevent physics jumps after lag/pause
-                 const maxDeltaTime = 0.1; // 100ms (10 FPS equivalent) - adjust as needed
+                 const maxDeltaTime = 0.1; 
                  const clampedDeltaTime = Math.min(deltaTime, maxDeltaTime);
 
-
-                // --- Updates --- (Use clampedDeltaTime for physics/movement)
                 this.movePlayer(clampedDeltaTime);
-                this.spawnEnemy(clampedDeltaTime); // Handles spawning different types based on timers
+                this.spawnEnemy(clampedDeltaTime); 
                 this.updateEnemies(clampedDeltaTime);
                 this.updateProjectiles(clampedDeltaTime);
                 this.updateTowers(clampedDeltaTime);
-                this.updateHazards(clampedDeltaTime); // Includes mines update
+                this.updateHazards(clampedDeltaTime); 
 
-                // Player Shooting logic (based on fireRate)
                  const currentFireInterval = 1 / (this.solarFlare.active ? this.fireRate / 1.5 : this.fireRate);
-                 this.timeSinceLastShot += clampedDeltaTime; // Use clamped delta for timers too
+                 this.timeSinceLastShot += clampedDeltaTime; 
                  if (this.isShooting && this.timeSinceLastShot >= currentFireInterval) {
                      this.shootProjectile();
-                     this.timeSinceLastShot = 0; // Reset timer accurately
+                     this.timeSinceLastShot = 0; 
                  }
-
-                // --- Collision Detection & Cleanup ---
-                this.handleCollisions(); // Handles detection and marking for removal
-
-                 // --- Check Game Over Condition AGAIN after collisions ---
-                 // Use the gameOver flag set during collision checks
+                this.handleCollisions(); 
                  if (this.gameOver) {
-                      if(this.playerHealth < 0) this.playerHealth = 0; // Clamp health display
+                      if(this.playerHealth < 0) this.playerHealth = 0; 
                       this.ui.sounds.shipDestroy.play().catch(e => console.warn(e));
-                     this.ui.endGame(); // Call UI method to handle screen swap and sounds
-                     return; // Exit update early as game is over
+                     this.ui.endGame(); 
+                     return; 
                  }
-
-                // --- Update HUD ---
-                // Use the stored hazard warning from updateHazards
-                // Clamp displayed health at 0 if player died this frame but gameOver screen hasn't shown yet
                 const displayedHealth = Math.max(0, Math.ceil(this.playerHealth));
                 this.ui.updateHUD(this.elapsedTime, this.coinCount, this.fireRate, displayedHealth, this.currentHazardWarning);
             }
@@ -2238,7 +2031,6 @@
             draw() {
                 const ctx = this.getCtx();
                 if (!ctx || !this.allImagesLoaded) {
-                     // Optionally draw a "Loading..." state if images aren't ready
                       if (!this.allImagesLoaded && ctx) {
                            ctx.fillStyle = "#0a0a1f";
                            ctx.fillRect(0, 0, this.ui.canvas.width, this.ui.canvas.height);
@@ -2249,176 +2041,134 @@
                       } else if(!ctx){
                            console.warn("Draw called without context.");
                       }
-                     return; // Don't draw if context is bad or images loading
+                     return; 
                  }
-                 if (this.gameOver) return; // Don't draw game elements if game is over
+                 if (this.gameOver) return; 
 
-
-                // Clear canvas
                 ctx.clearRect(0, 0, this.ui.canvas.width, this.ui.canvas.height);
 
-                // Draw Background
-                const bgImg = this.images.background;
+                // Draw Background for the current dimension
+                const bgImg = this.activeBackgroundImage; // Use the centrally managed active background
                 if (bgImg && bgImg.complete && bgImg.naturalWidth > 0) {
                     ctx.drawImage(bgImg, 0, 0, this.ui.canvas.width, this.ui.canvas.height);
                 } else {
-                     ctx.fillStyle = "#000010"; // Fallback solid dark color
+                     ctx.fillStyle = (this.currentDimension === 0) ? "#000010" : "#100000"; // Different fallback for visibility
                      ctx.fillRect(0, 0, this.ui.canvas.width, this.ui.canvas.height);
                 }
 
-
-                // Draw Coins
                  const coinImg = this.images.coin;
                  if (coinImg && coinImg.complete && coinImg.naturalWidth > 0) {
-                    this.coins.forEach(coin => {
+                    this.coins[this.currentDimension].forEach(coin => { // Draw current dimension's coins
                          ctx.drawImage(coinImg, coin.x - this.coinSize / 2, coin.y - this.coinSize / 2, this.coinSize, this.coinSize);
                     });
-                 } else { // Fallback drawing
+                 } else { 
                     ctx.fillStyle = "yellow";
-                    this.coins.forEach(coin => {
+                    this.coins[this.currentDimension].forEach(coin => {
                          ctx.beginPath();
                          ctx.arc(coin.x, coin.y, this.coinSize / 2, 0, Math.PI * 2);
                          ctx.fill();
                     });
                  }
 
-                // Draw Towers & Health Bars
                  const towerImg = this.images.tower;
-                 this.towers.forEach(tower => {
-                    // Draw tower image
+                 this.towers[this.currentDimension].forEach(tower => { // Draw current dimension's towers
                     if (towerImg && towerImg.complete && towerImg.naturalWidth > 0) {
                          ctx.drawImage(towerImg, tower.x - this.towerSize / 2, tower.y - this.towerSize / 2, this.towerSize, this.towerSize);
-                    } else { // Fallback drawing
+                    } else { 
                         ctx.fillStyle = "grey";
                         ctx.fillRect(tower.x - this.towerSize / 2, tower.y - this.towerSize / 2, this.towerSize, this.towerSize);
                     }
-                    // Draw health bar above tower
                     const barWidth = this.towerSize * 0.8;
                     const barHeight = 5;
                     const barX = tower.x - barWidth / 2;
-                    const barY = tower.y - this.towerSize / 2 - barHeight - 5; // Position above tower
+                    const barY = tower.y - this.towerSize / 2 - barHeight - 5; 
                     const healthPercent = Math.max(0, tower.health / this.towerHealth);
-
-                    ctx.fillStyle = "#555"; // Background of health bar
+                    ctx.fillStyle = "#555"; 
                     ctx.fillRect(barX, barY, barWidth, barHeight);
-                    ctx.fillStyle = `rgb(${Math.round(255 * (1 - healthPercent))}, ${Math.round(255 * healthPercent)}, 0)`; // Red to Green gradient
+                    ctx.fillStyle = `rgb(${Math.round(255 * (1 - healthPercent))}, ${Math.round(255 * healthPercent)}, 0)`; 
                     ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
-                    ctx.strokeStyle = "#333"; // Border
+                    ctx.strokeStyle = "#333"; 
                     ctx.strokeRect(barX, barY, barWidth, barHeight);
                 });
 
-                // Draw Player
                  const playerImg = this.images.player;
                  if (this.playerHealth > 0 && this.player) {
-                      // *** FIX: Changed rotation back to just 'angle' ***
                      const angle = Math.atan2(this.mouseY - this.player.y, this.mouseX - this.player.x);
                      ctx.save();
                      ctx.translate(this.player.x, this.player.y);
-                     ctx.rotate(angle); // Rotate image to face mouse/touch direction
+                     ctx.rotate(angle); 
                      if (playerImg && playerImg.complete && playerImg.naturalWidth > 0) {
-                         // Assume player image points RIGHT by default. Draw centered.
                          ctx.drawImage(playerImg, -this.player.size / 2, -this.player.size / 2, this.player.size, this.player.size);
-                     } else { // Fallback drawing
+                     } else { 
                           ctx.fillStyle = "blue";
-                          // Draw simple triangle/ship shape pointing right
                           ctx.beginPath();
-                          ctx.moveTo(this.player.size * 0.6, 0); // Tip (right)
-                          ctx.lineTo(-this.player.size * 0.4, -this.player.size * 0.4); // Back top
-                          ctx.lineTo(-this.player.size * 0.4, this.player.size * 0.4); // Back bottom
+                          ctx.moveTo(this.player.size * 0.6, 0); 
+                          ctx.lineTo(-this.player.size * 0.4, -this.player.size * 0.4); 
+                          ctx.lineTo(-this.player.size * 0.4, this.player.size * 0.4); 
                           ctx.closePath();
                           ctx.fill();
                      }
                      ctx.restore();
                  }
 
-
-                // Draw Enemies
-                 this.enemies.forEach(enemy => {
-                     // Determine the correct image key based on enemy type
-                      let imgKey = enemy.type; // Use type directly as key
-                      // Fallback if type doesn't match or image missing
+                 this.enemies[this.currentDimension].forEach(enemy => { // Draw current dimension's enemies
+                      let imgKey = enemy.type; 
                       let enemyImg = this.images[imgKey];
                       let drawFallback = !enemyImg || !enemyImg.complete || enemyImg.naturalWidth === 0;
-
                      ctx.save();
                      ctx.translate(enemy.x, enemy.y);
-                     // Optional: Rotate enemies based on target or movement?
-                      // Example: rotate towards target (if target exists)
-                      // let target = this.player; // Simplified target find
-                      // if (target) {
-                      //    const angleToTarget = Math.atan2(target.y - enemy.y, target.x - enemy.x);
-                      //    ctx.rotate(angleToTarget); // Rotate to face target
-                      // }
-
-
                      if (!drawFallback) {
                          ctx.drawImage(enemyImg, -this.enemySize / 2, -this.enemySize / 2, this.enemySize, this.enemySize);
-                     } else { // Fallback drawing
-                         let fallbackColor = "red"; // Default fallback
+                     } else { 
+                         let fallbackColor = "red"; 
                          if (enemy.type === 'nebulaStalker') fallbackColor = "purple";
                          else if (enemy.type === 'voidMineLayer') fallbackColor = "darkred";
-                         // Add other fallbacks as needed
-
                          ctx.fillStyle = fallbackColor;
                          ctx.fillRect(-this.enemySize / 2, -this.enemySize / 2, this.enemySize, this.enemySize);
-
-                         // Log missing image only once per type maybe?
-                         // if (!this.loggedMissing) this.loggedMissing = {};
-                         // if (!this.loggedMissing[imgKey]) {
-                         //    console.warn(`Drawing fallback for missing/invalid enemy image: ${imgKey}`);
-                         //    this.loggedMissing[imgKey] = true;
-                         // }
                      }
                      ctx.restore();
                  });
 
-                 // Draw Asteroids
                   const asteroidImg = this.images.asteroid;
-                 this.asteroids.forEach(asteroid => {
+                 this.asteroids[this.currentDimension].forEach(asteroid => { // Draw current dimension's asteroids
                     ctx.save();
                     ctx.translate(asteroid.x, asteroid.y);
                     ctx.rotate(asteroid.rotation);
                     if (asteroidImg && asteroidImg.complete && asteroidImg.naturalWidth > 0) {
                          ctx.drawImage(asteroidImg, -this.asteroidSize / 2, -this.asteroidSize / 2, this.asteroidSize, this.asteroidSize);
-                    } else { // Fallback drawing
+                    } else { 
                         ctx.fillStyle = "dimgray";
                         ctx.fillRect(-this.asteroidSize / 2, -this.asteroidSize / 2, this.asteroidSize, this.asteroidSize);
                     }
                      ctx.restore();
                 });
 
-                 // Draw Debris
-                 ctx.fillStyle = "#808080"; // Grey debris
-                 this.debris.forEach(particle => {
+                 ctx.fillStyle = "#808080"; 
+                 this.debris[this.currentDimension].forEach(particle => { // Draw current dimension's debris
                      ctx.fillRect(particle.x - this.debrisSize / 2, particle.y - this.debrisSize / 2, this.debrisSize, this.debrisSize);
                  });
 
-                // Draw Mines
-                 const mineImg = this.images.mine; // Get mine image
-                 this.mines.forEach(mine => {
+                 const mineImg = this.images.mine; 
+                 this.mines[this.currentDimension].forEach(mine => { // Draw current dimension's mines
                      ctx.save();
                      ctx.translate(mine.x, mine.y);
                      const drawMineFallback = !mineImg || !mineImg.complete || mineImg.naturalWidth === 0;
-
                      if (!drawMineFallback) {
-                         // Optional: Pulsate image alpha during warning?
                           if (mine.isWarning) {
-                             ctx.globalAlpha = (Math.sin(this.elapsedTime * 15) + 1) / 2 * 0.5 + 0.5; // Pulse between 0.5 and 1.0 alpha
+                             ctx.globalAlpha = (Math.sin(this.elapsedTime * 15) + 1) / 2 * 0.5 + 0.5; 
                           }
                          ctx.drawImage(mineImg, -mine.radius, -mine.radius, mine.radius * 2, mine.radius * 2);
-                         ctx.globalAlpha = 1.0; // Reset alpha
-                     } else { // Fallback circle drawing
+                         ctx.globalAlpha = 1.0; 
+                     } else { 
                          if (mine.isWarning) {
-                             // Flash red/orange during warning
-                              ctx.fillStyle = (Math.floor(this.elapsedTime * 10) % 2 === 0) ? "#FF8C00" : "#FF0000"; // Orange/Red flash
+                              ctx.fillStyle = (Math.floor(this.elapsedTime * 10) % 2 === 0) ? "#FF8C00" : "#FF0000"; 
                           } else {
-                              ctx.fillStyle = "#8B0000"; // Dark red default
+                              ctx.fillStyle = "#8B0000"; 
                           }
                          ctx.beginPath();
                          ctx.arc(0, 0, mine.radius, 0, Math.PI * 2);
                          ctx.fill();
-                         // Add a small core maybe
-                         ctx.fillStyle = "#FFA500"; // Orange core
+                         ctx.fillStyle = "#FFA500"; 
                           ctx.beginPath();
                          ctx.arc(0, 0, mine.radius * 0.4, 0, Math.PI * 2);
                          ctx.fill();
@@ -2426,108 +2176,79 @@
                      ctx.restore();
                  });
 
-
-                // Draw Projectiles
-                this.projectiles.forEach(proj => {
-                    if (proj.source === 'player') ctx.fillStyle = "#00FFFF"; // Cyan for player
-                    else if (proj.source === 'turret') ctx.fillStyle = "#FFFF00"; // Yellow for turret
-                    else if (proj.type === 'nebulaShot') ctx.fillStyle = "#FF00FF"; // Magenta for nebula
-                    else ctx.fillStyle = "white"; // Default
-
-                    // Draw simple circle projectiles
+                this.projectiles[this.currentDimension].forEach(proj => { // Draw current dimension's projectiles
+                    if (proj.source === 'player') ctx.fillStyle = "#00FFFF"; 
+                    else if (proj.source === 'turret') ctx.fillStyle = "#FFFF00"; 
+                    else if (proj.type === 'nebulaShot') ctx.fillStyle = "#FF00FF"; 
+                    else ctx.fillStyle = "white"; 
                     ctx.beginPath();
                     ctx.arc(proj.x, proj.y, proj.size / 2, 0, Math.PI * 2);
                     ctx.fill();
-                     // Optional: Add trails?
-                     // ctx.beginPath();
-                     // ctx.moveTo(proj.x, proj.y);
-                     // ctx.lineTo(proj.x - proj.vx * 0.02, proj.y - proj.vy * 0.02); // Short trail
-                     // ctx.strokeStyle = ctx.fillStyle; // Match color
-                     // ctx.lineWidth = proj.size * 0.6;
-                     // ctx.stroke();
-                     // ctx.lineWidth = 1; // Reset
                 });
 
-                // Draw Solar Flare Effect (if active)
                 if (this.solarFlare.active) {
-                    // Use duration for fade out, ensure smooth transition
-                    const flareMaxDuration = 7.0; // Match duration set in triggerSolarFlare
+                    const flareMaxDuration = 7.0; 
                     const progress = Math.max(0, this.solarFlare.duration / flareMaxDuration);
-                    const alpha = Math.sin(progress * Math.PI) * 0.3; // Sine wave fade in/out (max 0.3 alpha)
-                    ctx.fillStyle = `rgba(255, 100, 0, ${alpha})`; // Orange glow
+                    const alpha = Math.sin(progress * Math.PI) * 0.3; 
+                    ctx.fillStyle = `rgba(255, 100, 0, ${alpha})`; 
                     ctx.fillRect(0, 0, this.ui.canvas.width, this.ui.canvas.height);
                 } else if (this.solarFlare.warningTime > 0) {
-                     // Pulsing red border during warning
-                     const warnAlpha = (Math.sin(this.elapsedTime * 10) + 1) / 2 * 0.6; // Faster pulsing alpha 0 to 0.6
+                     const warnAlpha = (Math.sin(this.elapsedTime * 10) + 1) / 2 * 0.6; 
                      ctx.strokeStyle = `rgba(255, 0, 0, ${warnAlpha})`;
                      ctx.lineWidth = 5;
                      ctx.strokeRect(0, 0, this.ui.canvas.width, this.ui.canvas.height);
-                     ctx.lineWidth = 1; // Reset line width
+                     ctx.lineWidth = 1; 
                  }
-
             }
         }
 
         class Game {
             constructor() {
                 this.ui = new GameUI();
-                this.logic = new GameLogic(this.ui); // Pass UI to Logic
+                this.logic = new GameLogic(this.ui); 
                 this.animationFrameId = null;
-                this.isPaused = false; // Paused state
-                this.isRunning = false; // Tracks if game loop is active
+                this.isPaused = false; 
+                this.isRunning = false; 
             }
 
             prepareGame() {
-                // Initial canvas setup needed before game starts
-                 // this.ui.resizeCanvas(); // resizeCanvas now happens inside adjustLayout which is called on swapToScreen
-                // Assign button listeners
                 this.assignButtons();
-                 // Start playing lobby music immediately
-                 this.ui.mainMenu(); // Show main menu which should play lobby music
+                 this.ui.mainMenu(); 
             }
 
              handleResize() {
-                 // UI method handles resizing canvas and adjusting layout
-                 // this.ui.resizeCanvas(); // Now handled by adjustGameContainerLayout
-                 this.ui.adjustGameContainerLayout(); // Call the layout adjuster directly
+                 this.ui.adjustGameContainerLayout(); 
              }
 
             startGame() {
-                // Ensure previous loop is stopped if restarting
                 this.stopGameLoop();
-
                 console.log("Starting game...");
-                this.logic.reset(); // Reset game state
-                 // Ensure images are loaded before starting core game logic/drawing
+                this.logic.reset(); 
                  if (!this.logic.allImagesLoaded) {
                      console.log("Waiting for images to load...");
-                     // Optionally show loading indicator here via UI
-                     // Use interval or timeout to check again
                       let loadCheckInterval = setInterval(() => {
                           if (this.logic.allImagesLoaded) {
                               clearInterval(loadCheckInterval);
-                              this.finishStartGame(); // Proceed with starting
+                              this.finishStartGame(); 
                           }
-                      }, 100); // Check every 100ms
+                      }, 100); 
                  } else {
-                      this.finishStartGame(); // Start immediately if loaded
+                      this.finishStartGame(); 
                  }
             }
 
             finishStartGame() {
                  console.log("Assets loaded, finishing start game sequence.");
-                 this.ui.startGame(); // Prepare UI (handles layout, starts background music)
+                 this.ui.startGame(); 
                  this.isPaused = false;
-                 this.isRunning = true; // Mark as running
-                 this.logic.startTime = null; // Reset start time for timer
-                 this.logic.lastFrameTime = performance.now(); // Reset last frame time for deltaTime calc
-                 // Ensure context is available before starting loop
+                 this.isRunning = true; 
+                 this.logic.startTime = null; 
+                 this.logic.lastFrameTime = performance.now(); 
                   if (this.logic.getCtx()) {
-                       this.animationFrameId = requestAnimationFrame(this.gameLoop.bind(this)); // Start loop
+                       this.animationFrameId = requestAnimationFrame(this.gameLoop.bind(this)); 
                        console.log("Game loop started.");
                    } else {
                        console.error("Cannot start game loop - Canvas Context not available.");
-                       // Handle error - maybe show an error message on screen
                        this.isRunning = false;
                    }
              }
@@ -2538,7 +2259,6 @@
                      this.animationFrameId = null;
                  }
                  this.isRunning = false;
-                 // Pause any sounds that should stop when loop stops (e.g., player move)
                   if (this.logic.moveSoundPlaying) {
                       this.ui.sounds.shipMove.pause();
                       this.ui.sounds.shipMove.currentTime = 0;
@@ -2548,150 +2268,118 @@
              }
 
             gameLoop(timestamp) {
-                // Request the next frame immediately at the beginning
-                 if(this.isRunning) { // Only request next frame if supposed to be running
+                 if(this.isRunning) { 
                      this.animationFrameId = requestAnimationFrame(this.gameLoop.bind(this));
                  } else {
-                     this.animationFrameId = null; // Ensure ID is cleared if stopped
-                     return; // Exit if not running
+                     this.animationFrameId = null; 
+                     return; 
                  }
-
-                 // Primary exit conditions
                  if (this.isPaused) {
-                     return; // Don't run update/draw if paused
+                     return; 
                  }
-                  // Check game over state *after* ensuring not paused
                   if (this.logic.gameOver) {
-                       if(this.isRunning) { // If game just ended, stop the loop
+                       if(this.isRunning) { 
                            this.stopGameLoop();
                        }
-                       return; // Don't run update/draw if game over
+                       return; 
                    }
-
-
-                // Update logic and draw the frame
                  try {
                     this.logic.update(timestamp);
                     this.logic.draw();
                  } catch (error) {
                       console.error("Error in game loop:", error);
-                      this.stopGameLoop(); // Stop the loop on critical error
-                      // Optionally display an error message to the user via UI
+                      this.stopGameLoop(); 
                  }
             }
-
 
              pauseGame() {
                  if (this.isRunning && !this.isPaused) {
                      this.isPaused = true;
                       console.log("Game Paused");
-                      // Optional: Pause sounds like movement
                        if (this.logic.moveSoundPlaying) {
                            this.ui.sounds.shipMove.pause();
                        }
-                      // Optional: Dim screen or show pause menu via UI class
                  }
              }
 
              resumeGame() {
                  if (this.isRunning && this.isPaused) {
                      this.isPaused = false;
-                     // Reset lastFrameTime to avoid large deltaTime jump after resume
                      this.logic.lastFrameTime = performance.now();
                      console.log("Game Resumed");
-                      // Optional: Resume sounds
-                       if (this.logic.isMoving && this.logic.moveSoundPlaying === false) { // Resume move sound only if player should be moving
+                       if (this.logic.isMoving && this.logic.moveSoundPlaying === false) { 
                            this.ui.sounds.shipMove.play().catch(e => console.warn(e));
                            this.logic.moveSoundPlaying = true;
                        }
-                     // The gameLoop will continue automatically because isRunning is true and isPaused is false
                  }
              }
 
-            // Centralized method to handle back button logic on instruction screen during gameplay pause
              handleInstructionsBack() {
-                 this.ui.swapToScreen(this.ui.gameScreen); // Go back to the game screen UI
-                 this.resumeGame(); // Resume the game loop
+                 this.ui.swapToScreen(this.ui.gameScreen); 
+                 this.resumeGame(); 
              }
 
-             // Listener replacement function
              replaceButtonListener(buttonId, callback) {
                  const button = document.getElementById(buttonId);
                  if (button) {
-                    const newButton = button.cloneNode(true); // Clone to remove old listeners
+                    const newButton = button.cloneNode(true); 
                     button.parentNode.replaceChild(newButton, button);
-                    // Add new listeners to the cloned button
-                     this.addButtonListenerLogic(newButton, callback); // Use helper to add listeners
+                     this.addButtonListenerLogic(newButton, callback); 
                  } else {
                       console.warn(`Button with ID "${buttonId}" not found for replacing listener.`);
                   }
              }
 
-              // Helper to add consistent listeners (click/touchstart) to a button element
-             addButtonListenerLogic(buttonElement, callback) {
+              addButtonListenerLogic(buttonElement, callback) {
                  if(!buttonElement) return;
-
-                 // Use touchend for mobile primary action to avoid delay, click for desktop
                  let touchStarted = false;
                  let touchStartX = 0;
                  let touchStartY = 0;
-                 const tapThreshold = 10; // Max pixels moved to be considered a tap
-
+                 const tapThreshold = 10; 
                  buttonElement.addEventListener("touchstart", (e) => {
-                      e.preventDefault(); // Prevent zoom/scroll on button press
-                      e.stopPropagation(); // Prevent events bubbling to game area
+                      e.preventDefault(); 
+                      e.stopPropagation(); 
                       touchStarted = true;
                       touchStartX = e.changedTouches[0].clientX;
                       touchStartY = e.changedTouches[0].clientY;
-                      // Optional: Add active style feedback
                       buttonElement.style.transform = 'translateY(1px) scale(0.98)';
                   }, { passive: false });
-
                   buttonElement.addEventListener("touchend", (e) => {
                       if(touchStarted){
                          const touchEndX = e.changedTouches[0].clientX;
                          const touchEndY = e.changedTouches[0].clientY;
                          const movedX = Math.abs(touchEndX - touchStartX);
                          const movedY = Math.abs(touchEndY - touchStartY);
-
-                         // Only trigger callback if it was a tap (minimal movement)
                          if (movedX < tapThreshold && movedY < tapThreshold) {
-                             e.preventDefault(); // Prevent potential ghost click
+                             e.preventDefault(); 
                              e.stopPropagation();
                              callback(e);
                          }
                          touchStarted = false;
-                         // Reset style
                           buttonElement.style.transform = '';
                       }
                   }, { passive: false });
-
                   buttonElement.addEventListener("click", (e) => {
-                      // Fallback for mouse users or if touch didn't fire correctly
-                      if (!touchStarted) { // Only fire click if touch didn't handle it
+                      if (!touchStarted) { 
                           e.stopPropagation();
                           callback(e);
                       }
                   });
-
-                  // Handle touch cancellation/leaving the button
                   const resetTouch = () => {
                      if(touchStarted){
                          touchStarted = false;
-                          buttonElement.style.transform = ''; // Reset style
+                          buttonElement.style.transform = ''; 
                      }
                   }
                    buttonElement.addEventListener("touchcancel", resetTouch, { passive: false });
-                   buttonElement.addEventListener("touchleave", resetTouch, { passive: false }); // When finger slides off
+                   buttonElement.addEventListener("touchleave", resetTouch, { passive: false }); 
              }
 
-
             assignButtons() {
-                // Use a wrapper function to pass the button ID and callback
                  const setupButton = (id, callback) => {
                      const button = document.getElementById(id);
                      if(button){
-                         this.addButtonListenerLogic(button, callback); // Use helper to add listeners
+                         this.addButtonListenerLogic(button, callback); 
                      } else {
                           console.warn(`Button with ID "${id}" not found.`);
                       }
@@ -2700,60 +2388,52 @@
                 setupButton("play-button", () => this.startGame());
                 setupButton("settings-button", () => this.ui.settings());
                 setupButton("instructions-button", () => {
-                    // Special handling if game is running but not paused
                     if (this.isRunning && !this.isPaused) {
                         this.pauseGame();
-                        // Replace the back button listener on instructions screen
                          this.replaceButtonListener("instructions-back-button", () => this.handleInstructionsBack());
                     } else {
-                         // Ensure default listener if game not running or already paused
                          this.replaceButtonListener("instructions-back-button", () => this.ui.mainMenu());
                      }
-                    this.ui.instructions(); // Show instructions screen
+                    this.ui.instructions(); 
                 });
                 setupButton("play-again-button", () => this.startGame());
                 setupButton("settings-back-button", () => this.ui.mainMenu());
-                // Default listener for instructions back button (may be replaced above)
                  setupButton("instructions-back-button", () => this.ui.mainMenu());
-
                 setupButton("main-menu-button", () => {
-                    this.stopGameLoop(); // Make sure game loop stops if returning from game over
+                    this.stopGameLoop(); 
                     this.ui.mainMenu();
                 });
-
-                 // Game Controls Buttons (only active during game)
                  setupButton("game-menu-button", () => {
-                     if (this.isRunning) { // Only works if game is running
-                         this.pauseGame(); // Pause instead of stopping loop immediately
-                         // Optional: Show confirm dialog? For now, stop immediately after pause.
-                         this.stopGameLoop(); // Stop loop confirmed (or immediately if no confirm)
+                     if (this.isRunning) { 
+                         this.pauseGame(); 
+                         this.stopGameLoop(); 
                          this.ui.mainMenu();
                      }
                  });
                  setupButton("game-restart-button", () => {
-                     if (this.isRunning) { // Only allow restart if a game was running
-                         this.stopGameLoop(); // Stop current loop first
-                         this.startGame(); // Start fresh
+                     if (this.isRunning) { 
+                         this.stopGameLoop(); 
+                         this.startGame(); 
                      }
                  });
                  setupButton("game-instructions-button", () => {
-                     if (this.isRunning && !this.isPaused) { // Only works if game is running and not already paused
+                     if (this.isRunning && !this.isPaused) { 
                          this.pauseGame();
-                         // Replace back button listener
                           this.replaceButtonListener("instructions-back-button", () => this.handleInstructionsBack());
-                         this.ui.instructions(); // Show instructions screen
+                         this.ui.instructions(); 
                      }
+                 });
+                 // New button for dimension switching
+                 setupButton("dimension-switch-button", () => {
+                    if (this.isRunning && !this.isPaused) {
+                        this.logic.switchDimension();
+                    }
                  });
             }
         }
 
-        // --- Game Initialization ---
-        // Create game instance only after DOM is ready
         const game = new Game();
-        // Prepare listeners and initial UI state
         game.prepareGame();
-
-        // Add window resize listener
         window.addEventListener('resize', () => game.handleResize());
 
     });

@@ -34,74 +34,20 @@ evaluate_task:
     - Evaluation of the QA feedback's effectiveness.
     - Final recommendation (e.g., Approve, Approve with minor changes, Requires major revision).
 
-generate_background_task:
+generate_dimesion_background_task:
   description: |
     Generate the main background image asset for the game '{game}'.
     The background should depict outer space.
     Use the following detailed description: '{background_description}'.
     Save the generated image using the base filename: '{background_filename}'.
     Utilize the assigned image generation tool.
+    Ensure it is similar to the original background.
   expected_output: |
     Confirmation message stating the background image asset was generated and saved, including the full local file path ending with '{background_filename}.[ext]'.
 
-generate_spaceship_task:
-  description: |
-    Generate the primary player spaceship image asset for the game '{game}'.
-    Use the following detailed description: '{spaceship_description}'.
-    Save the generated image using the base filename: '{spaceship_filename}'.
-    Utilize the assigned image generation tool.
-  expected_output: |
-    Confirmation message stating the spaceship image asset was generated and saved, including the full local file path ending with '{spaceship_filename}.[ext]'.
-
-generate_void_mine_layer_task:
-  description: |
-    Generate the 'Void Mine Layer' enemy/obstacle image asset for the game '{game}'.
-    Use the following detailed description: '{void_mine_layer_description}'.
-    Save the generated image using the base filename: '{void_mine_layer_filename}'.
-    Utilize the assigned image generation tool.
-  expected_output: |
-    Confirmation message stating the void mine layer image asset was generated and saved, including the full local file path ending with '{void_mine_layer_filename}.[ext]'.
-
-generate_zephyrscout_task:
-  description: |
-    Generate the 'ZephyrScout' enemy/ship image asset for the game '{game}'.
-    Use the following detailed description: '{zephyrscout_description}'.
-    Save the generated image using the base filename: '{zephyrscout_filename}'.
-    Utilize the assigned image generation tool.
-  expected_output: |
-    Confirmation message stating the ZephyrScout image asset was generated and saved, including the full local file path ending with '{zephyrscout_filename}.[ext]'.
-
-generate_nebula_stalker_task:
-  description: |
-    Generate the 'Nebula Stalker' enemy/ship image asset for the game '{game}'.
-    Use the following detailed description: '{nebula_stalker_description}'.
-    Save the generated image using the base filename: '{nebula_stalker_filename}'.
-    Utilize the assigned image generation tool.
-  expected_output: |
-    Confirmation message stating the Nebula Stalker image asset was generated and saved, including the full local file path ending with '{nebula_stalker_filename}.[ext]'.
-
-generate_asteroid_task:
-  description: |
-    Generate an asteroid image asset for the game '{game}'.
-    Use the following detailed description: '{asteroid_description}'.
-    Save the generated image using the base filename: '{asteroid_filename}'.
-    Utilize the assigned image generation tool.
-  expected_output: |
-    Confirmation message stating the asteroid image asset was generated and saved, including the full local file path ending with '{asteroid_filename}.[ext]'.
-
-generate_tower_task:
-  description: |
-    Generate the 'Tower' structure/enemy image asset for the game '{game}'.
-    This should resemble a ring-type spaceship structure.
-    Use the following detailed description: '{tower_description}'.
-    Save the generated image using the base filename: '{tower_filename}'.
-    Utilize the assigned image generation tool.
-  expected_output: |
-    Confirmation message stating the tower image asset was generated and saved, including the full local file path ending with '{tower_filename}.[ext]'.
-  
 generate_audio_task:
   description: |
-    Generate the audio assets for the game '{game}' using '{gameDesc}'.
+    Generate the audio assets for the dimension switch game '{game}' using '{gameDesc}'.
   expected_output: |
     Detailed audio descriptions for each of the instances of audio files in the game code.
 

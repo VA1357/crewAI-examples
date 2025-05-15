@@ -124,60 +124,12 @@ class GameBuilderCrew:
 
     # Asset Generation Tasks (assigned to Concept Artist)
     @task
-    def generate_background_task(self) -> Task:
+    def generate_dimension_background_task(self) -> Task:
         """Task to generate the outer space background asset."""
         return Task(
-            config=self.tasks_config['generate_background_task'],
+            config=self.tasks_config['generate_dimension_background_task'],
             agent=self.concept_artist_agent()
             # Add context=[] if description depends on previous tasks
-        )
-
-    @task
-    def generate_spaceship_task(self) -> Task:
-        """Task to generate the player spaceship asset."""
-        return Task(
-            config=self.tasks_config['generate_spaceship_task'],
-            agent=self.concept_artist_agent()
-        )
-
-    @task
-    def generate_void_mine_layer_task(self) -> Task:
-        """Task to generate the void mine layer asset."""
-        return Task(
-            config=self.tasks_config['generate_void_mine_layer_task'],
-            agent=self.concept_artist_agent()
-        )
-
-    @task
-    def generate_zephyrscout_task(self) -> Task:
-        """Task to generate the ZephyrScout (enemy) asset."""
-        return Task(
-            config=self.tasks_config['generate_zephyrscout_task'],
-            agent=self.concept_artist_agent()
-        )
-
-    @task
-    def generate_nebula_stalker_task(self) -> Task:
-        """Task to generate the Nebula Stalker asset."""
-        return Task(
-            config=self.tasks_config['generate_nebula_stalker_task'],
-            agent=self.concept_artist_agent()
-        )
-
-    @task
-    def generate_asteroid_task(self) -> Task:
-        """Task to generate the asteroid asset."""
-        return Task(
-            config=self.tasks_config['generate_asteroid_task'],
-            agent=self.concept_artist_agent()
-        )
-
-    @task
-    def generate_tower_task(self) -> Task:
-        """Task to generate the tower asset."""
-        return Task(
-            config=self.tasks_config['generate_tower_task'],
-            agent=self.concept_artist_agent()
         )
     
     @task
